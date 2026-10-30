@@ -2991,3 +2991,13 @@ test('Clear All cancels a saved restore still waiting to start', async () => {
   assert.equal(enabledLayerParam(sink), '');
   coordinator.destroy();
 });
+
+test('GOES-19 satellite product serializes without changing existing product codes', () => {
+  const state = normalizeLayerState({
+    enabledLayerIds: ['weather-satellite'],
+    options: { 'weather-satellite': { product: 'clouds-goes19' } },
+  });
+  const encoded = new URLSearchParams(encode(state));
+  const restored = decodeLayerStateParams(encoded);
+  assert.equal(restored.options['weather-satellite'].product, 'clouds-goes19');
+});

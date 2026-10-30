@@ -2929,5 +2929,10 @@
   "route proxy error": "Fehler des Routen-Proxys",
   "Weather stations": "Wetterstationen",
   "Missing / stale": "Fehlend / veraltet",
-  "{count} stations · {freshness}": "{count} Stationen · {freshness}"
+  "{count} stations · {freshness}": "{count} Stationen · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "GOES-19 INFRAROT · ~10 Min.",
+  "Ecuador + Galápagos · infrared, not rain": "Ecuador + Galápagos · Infrarot, kein Regen",
+  "Ecuador + Galápagos": "Ecuador + Galápagos",
+  "Ecuador · GOES-19": "Ecuador · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "GOES-19 Band 13 Infrarot; 10-Minuten-Scans, kein Regen"
 }

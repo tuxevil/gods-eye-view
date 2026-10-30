@@ -94,7 +94,7 @@ export async function acquireWeatherImage(
     if (image.width !== size.width || image.height !== size.height)
       throw new Error('Invalid weather image dimensions');
     let texture;
-    if (product === 'clouds' || product === 'clouds-regional')
+    if (['clouds', 'clouds-regional', 'clouds-goes19'].includes(product))
       texture = processInfraredImage(image, mode, createCanvas);
     else {
       texture = createCanvas();

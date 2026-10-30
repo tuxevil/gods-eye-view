@@ -97,9 +97,11 @@ export function createWeatherLayer({
       ? RADAR_MAX_GAP_MS
       : lightning
         ? LIGHTNING_MAX_GAP_MS
-        : product === 'clouds'
-          ? GLOBAL_INFRARED_MAX_GAP_MS
-          : REGIONAL_INFRARED_MAX_GAP_MS;
+        : product === 'clouds-goes19'
+          ? 40 * 60_000
+          : product === 'clouds'
+            ? GLOBAL_INFRARED_MAX_GAP_MS
+            : REGIONAL_INFRARED_MAX_GAP_MS;
   const isLatest = () =>
     clock ? clock.getState().mode === 'latest' : followLatest;
   const getHost = () =>
@@ -113,7 +115,14 @@ export function createWeatherLayer({
   const observationDelayed = () =>
     manifest?.latest &&
     Date.now() - Date.parse(manifest.latest) >
-      (product === 'clouds' ? 240 : lightning ? 45 : 20) * 60_000;
+      (product === 'clouds'
+        ? 240
+        : product === 'clouds-goes19'
+          ? 40
+          : lightning
+            ? 45
+            : 20) *
+        60_000;
   const stop = () => {
     if (clock) return;
     playing = false;
@@ -276,7 +285,9 @@ export function createWeatherLayer({
         ? 'Lightning density'
         : 'Satellite clouds',
     icon: radar ? '◉' : lightning ? 'ϟ' : '☁',
-    source: 'NOAA nowCOAST · OBSERVED',
+    get source() {
+      return `${manifest?.source ?? (product === 'clouds-goes19' ? 'NOAA GOES-19 · UW–Madison SSEC RealEarth' : 'NOAA nowCOAST')} · OBSERVED`;
+    },
     updateInterval: lightning ? 600_000 : 120_000,
     init(nextViewer) {
       viewer = nextViewer;
@@ -436,7 +447,9 @@ export function createWeatherLayer({
       }
       if (
         satellite &&
-        ['clouds', 'clouds-regional'].includes(params.product) &&
+        ['clouds', 'clouds-regional', 'clouds-goes19'].includes(
+          params.product,
+        ) &&
         params.product !== product
       ) {
         product = params.product;
@@ -611,7 +624,9 @@ export function createWeatherLayer({
           ? t('LIGHTNING DENSITY · 15 min accumulation')
           : product === 'clouds'
             ? t('GLOBAL INFRARED · hourly')
-            : t('GOES INFRARED · ~5 min');
+            : product === 'clouds-goes19'
+              ? t('GOES-19 INFRARED · ~10 min')
+              : t('GOES INFRARED · ~5 min');
       const infoTime = time
         ? `${t('{state}: {time}', {
             state: followLatest ? t('Latest observation') : t('History'),
@@ -637,7 +652,9 @@ export function createWeatherLayer({
           ? `${t('Americas + Pacific · not individual strikes')}\n${t('Color: strikes/km²/min ×10³')}`
           : product === 'clouds'
             ? t('60°S–60°N · typically 2–3 h delayed')
-            : t('North America · infrared imagery');
+            : product === 'clouds-goes19'
+              ? t('Ecuador + Galápagos · infrared, not rain')
+              : t('North America · infrared imagery');
       const infoMotion = motion?.matches
         ? clock
           ? t('Reduced motion · history playback unavailable')
@@ -657,7 +674,9 @@ export function createWeatherLayer({
               ? t('Americas + Pacific')
               : product === 'clouds'
                 ? t('Global · 60°S–60°N')
-                : t('North America'),
+                : product === 'clouds-goes19'
+                  ? t('Ecuador + Galápagos')
+                  : t('North America'),
           shownTime: time,
           maxGapMinutes: maxGap() / 60_000,
           detail,
@@ -674,6 +693,24 @@ export function createWeatherLayer({
                   : outside
                     ? t('Map center outside coverage')
                     : null),
+          ...(product === 'clouds-goes19'
+            ? {
+                lines: [
+                  {
+                    id: 'source',
+                    text:
+                      manifest?.source ??
+                      'NOAA GOES-19 · UW–Madison SSEC RealEarth',
+                    muted: true,
+                  },
+                  {
+                    id: 'measurement',
+                    text: t('Ecuador + Galápagos · infrared, not rain'),
+                    muted: true,
+                  },
+                ],
+              }
+            : {}),
           units: radar ? 'dBZ' : lightning ? t('strikes/km²/min ×10³') : '',
         },
         chips: [
@@ -681,6 +718,7 @@ export function createWeatherLayer({
             ? [
                 ['clouds-regional', t('N. America')],
                 ['clouds', t('Global')],
+                ['clouds-goes19', t('Ecuador · GOES-19')],
               ].map(([value, label]) => ({
                 id: value,
                 label,
@@ -689,7 +727,11 @@ export function createWeatherLayer({
                 title:
                   value === 'clouds'
                     ? t('Hourly global mosaic; usually 2–3 hours delayed')
-                    : t('GOES regional clouds; approximately 5-minute updates'),
+                    : value === 'clouds-goes19'
+                      ? t('GOES-19 Band 13 infrared; 10-minute scans, not rain')
+                      : t(
+                          'GOES regional clouds; approximately 5-minute updates',
+                        ),
               }))
             : []),
           ...(satellite
@@ -748,18 +790,21 @@ export function createWeatherLayer({
             : [],
         info: hostHidden
           ? shownHost
-          : `${infoHeading}\n${infoTime}${missing ? `\n${missing}` : ''}${manifest?.stale ? `\n${t('STALE · cached source metadata')}` : ''}${shownProblem ? `\n${shownProblem}` : ''}\n${infoCoverage}${outside ? `\n${t('Map center is outside source coverage')}` : ''}${infoMotion ? `\n${infoMotion}` : ''}`,
-        infoTitle: lightning
-          ? t(
-              'NOAA/NWS 15-minute lightning density derived from Vaisala NLDN/GLD360. Coverage 110°E across the Pacific/Americas to 0°, 25°S–80°N. Not a live strike count, global coverage or a safety warning.',
-            )
-          : radar
-            ? t(
-                'NOAA MRMS radar echoes indicate precipitation patterns, not rain rate, a storm warning or a future forecast. Native source approximately 1 km; display is limited to level 6. Frames use exact advertised observation times.',
-              )
-            : t(
-                'GOES-19/18 longwave infrared Band 14 regional; NESDIS global longwave mosaic. Clouds only dims everything but bright, cold cloud tops; a brightness filter, not a cloud mask. Coverage and freshness differ by region.',
-              ),
+          : `${infoHeading}${product === 'clouds-goes19' ? '\nNOAA GOES-19 · UW–Madison SSEC RealEarth' : ''}\n${infoTime}${missing ? `\n${missing}` : ''}${manifest?.stale ? `\n${manifest.reason === 'Source observations delayed' ? t('Source observations delayed') : t('STALE · cached source metadata')}` : ''}${shownProblem ? `\n${shownProblem}` : ''}\n${infoCoverage}${outside ? `\n${t('Map center is outside source coverage')}` : ''}${infoMotion ? `\n${infoMotion}` : ''}`,
+        infoTitle:
+          product === 'clouds-goes19'
+            ? t('GOES-19 Band 13 infrared; 10-minute scans, not rain')
+            : lightning
+              ? t(
+                  'NOAA/NWS 15-minute lightning density derived from Vaisala NLDN/GLD360. Coverage 110°E across the Pacific/Americas to 0°, 25°S–80°N. Not a live strike count, global coverage or a safety warning.',
+                )
+              : radar
+                ? t(
+                    'NOAA MRMS radar echoes indicate precipitation patterns, not rain rate, a storm warning or a future forecast. Native source approximately 1 km; display is limited to level 6. Frames use exact advertised observation times.',
+                  )
+                : t(
+                    'GOES-19/18 longwave infrared Band 14 regional; NESDIS global longwave mosaic. Clouds only dims everything but bright, cold cloud tops; a brightness filter, not a cloud mask. Coverage and freshness differ by region.',
+                  ),
       };
       controls.summary.settings = [
         ...(satellite
@@ -812,7 +857,7 @@ export function createWeatherLayer({
         loading,
         error: error || rendering?.getDiagnostics().error || null,
         stale: Boolean(manifest?.stale || observationDelayed()),
-        source: 'NOAA nowCOAST',
+        source: manifest?.source ?? 'NOAA nowCOAST',
         observedAt: shownTime(),
       };
     },

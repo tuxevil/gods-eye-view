@@ -3069,5 +3069,10 @@
   "route proxy error": "ошибка прокси маршрутов",
   "Weather stations": "Метеостанции",
   "Missing / stale": "Нет данных / устарело",
-  "{count} stations · {freshness}": "{count} станций · {freshness}"
+  "{count} stations · {freshness}": "{count} станций · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "ИК GOES-19 · ~10 мин",
+  "Ecuador + Galápagos · infrared, not rain": "Эквадор + Галапагосы · ИК-изображения, не дождь",
+  "Ecuador + Galápagos": "Эквадор + Галапагосы",
+  "Ecuador · GOES-19": "Эквадор · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "ИК GOES-19, канал 13; сканирование каждые 10 минут, не дождь"
 }

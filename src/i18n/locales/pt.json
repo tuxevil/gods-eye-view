@@ -2999,5 +2999,10 @@
   "Tip: the GEV MIC button in the dock lets you talk to the map.": "Dica: o botão GEV MIC no dock permite falar com o mapa.",
   "Weather stations": "Estações meteorológicas",
   "Missing / stale": "Ausente / desatualizado",
-  "{count} stations · {freshness}": "{count} estações · {freshness}"
+  "{count} stations · {freshness}": "{count} estações · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "INFRAVERMELHO GOES-19 · ~10 min",
+  "Ecuador + Galápagos · infrared, not rain": "Equador + Galápagos · infravermelho, não chuva",
+  "Ecuador + Galápagos": "Equador + Galápagos",
+  "Ecuador · GOES-19": "Equador · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "Infravermelho GOES-19 banda 13; varreduras a cada 10 minutos, não chuva"
 }

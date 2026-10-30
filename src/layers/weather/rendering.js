@@ -347,7 +347,9 @@ function createGlobeRendering({
             ? 'NOAA/NWS lightning density · derived from Vaisala NLDN/GLD360'
             : snapshot.product === 'radar'
               ? 'NOAA nowCOAST · NWS/OAR MRMS'
-              : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
+              : snapshot.product === 'clouds-goes19'
+                ? 'NOAA/NESDIS GOES-19 · UW–Madison SSEC RealEarth'
+                : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
           false,
         );
         const provider = global
@@ -392,7 +394,10 @@ function createGlobeRendering({
             .then((image) => {
               // Cesium decodes tiles as ImageBitmaps already flipped, since WebGL
               // ignores UNPACK_FLIP_Y for them; a canvas upload flips again.
-              if (!frame.closed && snapshot.product === 'clouds-regional')
+              if (
+                !frame.closed &&
+                ['clouds-regional', 'clouds-goes19'].includes(snapshot.product)
+              )
                 image = processInfraredImage(image, infrared, createCanvas, {
                   flipY:
                     typeof ImageBitmap !== 'undefined' &&

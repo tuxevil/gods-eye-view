@@ -8,6 +8,7 @@ export const WEATHER_SHELL_HEIGHTS = Object.freeze({
   wind: 5_000,
   clouds: 5_500,
   'clouds-regional': 5_800,
+  'clouds-goes19': 5_800,
   radar: 6_200,
   lightning: 6_600,
 });
@@ -411,7 +412,9 @@ export function createWeatherShell({
   const scene = viewer.scene;
   const size = fitTexture(cesium, WEATHER_IMAGE_SIZES[product]);
   const detailSize = fitTexture(cesium, WEATHER_DETAIL_SIZE);
-  const infrared = product === 'clouds' || product === 'clouds-regional';
+  const infrared = ['clouds', 'clouds-regional', 'clouds-goes19'].includes(
+    product,
+  );
   // Global infrared contrast depends on the requested extent, so a window would
   // not match the image around it; the globe host also shows one mosaic.
   const detailed = product !== 'clouds';

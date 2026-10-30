@@ -2999,5 +2999,10 @@
   "Cyclone request timed out": "Délai dépassé pour la requête cyclonique",
   "Weather stations": "Stations météorologiques",
   "Missing / stale": "Absent / périmé",
-  "{count} stations · {freshness}": "{count} stations météo · {freshness}"
+  "{count} stations · {freshness}": "{count} stations météo · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "INFRAROUGE GOES-19 · ~10 min",
+  "Ecuador + Galápagos · infrared, not rain": "Équateur + Galápagos · infrarouge, pas de pluie",
+  "Ecuador + Galápagos": "Équateur + Galápagos",
+  "Ecuador · GOES-19": "Équateur · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "Infrarouge GOES-19 bande 13 ; balayages toutes les 10 minutes, pas de pluie"
 }

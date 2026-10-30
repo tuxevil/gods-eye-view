@@ -1648,9 +1648,9 @@ test('satellite mode chips restage history without changing time or latest-follo
   assert.deepEqual(
     h.layer
       .getRowControls()
-      .chips.slice(0, 4)
+      .chips.slice(0, 5)
       .map((chip) => chip.label),
-    ['N. America', 'Global', 'Clouds only', 'Full'],
+    ['N. America', 'Global', 'Ecuador · GOES-19', 'Clouds only', 'Full'],
   );
   h.stages[2].finish();
   await flush();
@@ -2399,4 +2399,41 @@ test('disabled weather releases its camera listener and re-enabling binds only o
   assert.equal(h.moveEnd.size, 1);
   h.layer.destroy();
   assert.equal(h.moveEnd.size, 0);
+});
+
+test('GOES-19 selection retains the satellite contract, exact history and visible provenance', async () => {
+  const h = layerHarness({
+    id: 'weather-satellite',
+    feed: {
+      getSnapshot: async ({ product }) => ({
+        ...snapshot,
+        product,
+        source: 'NOAA GOES-19 via UW–Madison SSEC RealEarth',
+        bounds: { west: -100, south: -16, east: -60, north: 4 },
+      }),
+    },
+  });
+  const chip = h.layer
+    .getRowControls()
+    .chips.find(({ id }) => id === 'clouds-goes19');
+  assert.deepEqual(chip.params, { product: 'clouds-goes19' });
+  h.layer.setParams(chip.params);
+  await flush();
+  h.stages.at(-1).finish();
+  await flush();
+  assert.equal(h.layer.getParams().product, 'clouds-goes19');
+  const summary = h.layer.getRowControls().summary;
+  assert.equal(summary.coverage, 'Ecuador + Galápagos');
+  assert.match(
+    summary.lines.map((line) => line.text).join(' '),
+    /SSEC RealEarth.*not rain/,
+  );
+  assert.equal(summary.maxGapMinutes, 40);
+  assert.match(h.layer.getStats().source, /GOES-19/);
+  h.layer.setParams({ step: -1 });
+  assert.equal(h.stages.at(-1).time, times[1]);
+  h.stages.at(-1).finish();
+  await flush();
+  assert.equal(h.layer.getDiagnostics().time, times[1]);
+  h.layer.destroy();
 });

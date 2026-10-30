@@ -163,7 +163,9 @@
     "{value} KM/S",
     "ΔN",
     "Ⅱ PAUSE",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "Ecuador + Galápagos",
+    "Ecuador · GOES-19"
   ],
   "es": [
     "1090 MHz",
@@ -288,7 +290,9 @@
     "{value} KM/S",
     "ΔE",
     "ΔN",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "Ecuador + Galápagos",
+    "Ecuador · GOES-19"
   ],
   "fr": [
     "1090 MHz",
@@ -636,7 +640,9 @@
     "{value} conf",
     "ΔE",
     "ΔN",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "Ecuador + Galápagos",
+    "Ecuador · GOES-19"
   ],
   "ja": [
     "1090 MHz",

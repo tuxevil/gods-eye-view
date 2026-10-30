@@ -2859,5 +2859,10 @@
   "Cyclone request timed out": "サイクロンのリクエストがタイムアウトしました",
   "Weather stations": "気象観測所",
   "Missing / stale": "欠測 / 古いデータ",
-  "{count} stations · {freshness}": "{count} 観測所 · {freshness}"
+  "{count} stations · {freshness}": "{count} 観測所 · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "GOES-19 赤外線 · 約10分",
+  "Ecuador + Galápagos · infrared, not rain": "エクアドル＋ガラパゴス · 赤外線、降雨ではありません",
+  "Ecuador + Galápagos": "エクアドル＋ガラパゴス",
+  "Ecuador · GOES-19": "エクアドル · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "GOES-19 バンド13赤外線。10分ごとの観測、降雨ではありません"
 }

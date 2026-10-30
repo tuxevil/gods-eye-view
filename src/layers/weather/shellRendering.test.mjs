@@ -82,10 +82,9 @@ function harness({ product = 'radar', camera, ...options } = {}) {
       return response();
     },
     decodeImage: async () => {
-      const size =
-        product === 'clouds'
-          ? { width: 2048, height: 1024 }
-          : { width: 4096, height: 2048 };
+      const size = ['clouds', 'clouds-goes19'].includes(product)
+        ? { width: 2048, height: 1024 }
+        : { width: 4096, height: 2048 };
       const image = {
         ...size,
         closed: false,
@@ -125,6 +124,7 @@ test('shell heights stack every product with lightning highest', () => {
     wind: 5_000,
     clouds: 5_500,
     'clouds-regional': 5_800,
+    'clouds-goes19': 5_800,
     radar: 6_200,
     lightning: 6_600,
   });
@@ -746,6 +746,7 @@ test('prefetch warms a decoded frame without staging and cancels cleanly', async
 test('infrared frames get the display transfer; radar and lightning keep their pixels', async () => {
   for (const [product, transfer] of [
     ['clouds-regional', true],
+    ['clouds-goes19', true],
     ['clouds', true],
     ['radar', false],
     ['lightning', false],

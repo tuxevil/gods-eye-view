@@ -199,3 +199,30 @@ test('image frames are read through the bounded image route', async () => {
     /Weather image HTTP 409/,
   );
 });
+
+test('GOES-19 uses the existing bounded source and local exact-time image/tile routes', async () => {
+  const product = 'clouds-goes19';
+  const source = createWeatherSource({
+    fetchImpl: async (url) => {
+      assert.equal(url, '/api/weather/manifest?product=clouds-goes19');
+      return Response.json({
+        ...snapshot(),
+        product,
+        source: 'NOAA GOES-19 via SSEC',
+        bounds: { west: -100, south: -16, east: -60, north: 4 },
+      });
+    },
+  });
+  const value = await source.getSnapshot({ product });
+  assert.equal(value.latest, time);
+  assert.equal(
+    weatherImageUrl(product, time),
+    `/api/weather/image?product=${product}&time=${encodeURIComponent(time)}`,
+  );
+  assert.match(weatherTileUrl(product, time), /product=clouds-goes19/);
+  assert.deepEqual(WEATHER_IMAGE_SIZES[product], { width: 2048, height: 1024 });
+  assert.throws(
+    () => weatherImageUrl(product, time, { width: 4096, height: 2048 }),
+    /size/,
+  );
+});

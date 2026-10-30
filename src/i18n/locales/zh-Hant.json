@@ -2859,5 +2859,10 @@
   "route proxy error": "路線代理出錯",
   "Weather stations": "氣象站",
   "Missing / stale": "缺失 / 過期",
-  "{count} stations · {freshness}": "{count} 個站點 · {freshness}"
+  "{count} stations · {freshness}": "{count} 個站點 · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "GOES-19 紅外線 · 約10分鐘",
+  "Ecuador + Galápagos · infrared, not rain": "厄瓜多＋加拉巴哥 · 紅外線，非降雨",
+  "Ecuador + Galápagos": "厄瓜多＋加拉巴哥",
+  "Ecuador · GOES-19": "厄瓜多 · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "GOES-19 第13波段紅外線；每10分鐘掃描，非降雨"
 }

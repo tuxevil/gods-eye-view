@@ -50,6 +50,7 @@ const OPTION_CANDIDATES = [
   'hybrid',
   'clouds',
   'clouds-regional',
+  'clouds-goes19',
   'pano',
   'flat',
   'filtered',

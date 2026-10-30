@@ -3069,5 +3069,10 @@
   "Cyclone request timed out": "Минув час очікування запиту циклонів",
   "Weather stations": "Метеостанції",
   "Missing / stale": "Немає даних / застаріло",
-  "{count} stations · {freshness}": "{count} станцій · {freshness}"
+  "{count} stations · {freshness}": "{count} станцій · {freshness}",
+  "GOES-19 INFRARED · ~10 min": "ІЧ GOES-19 · ~10 хв",
+  "Ecuador + Galápagos · infrared, not rain": "Еквадор + Галапагоси · ІЧ-зображення, не дощ",
+  "Ecuador + Galápagos": "Еквадор + Галапагоси",
+  "Ecuador · GOES-19": "Еквадор · GOES-19",
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "ІЧ GOES-19, канал 13; сканування кожні 10 хвилин, не дощ"
 }
