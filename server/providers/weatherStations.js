@@ -38,7 +38,8 @@ export function createStationService({
     if (old?.retryAfter > now()) return { ...old, stale: true };
     if (pending.has(cell)) return pending.get(cell);
     // A bounded cache also bounds arbitrary worldwide exploration.
-    if (pending.size >= 4 || now() - lastStartedAt < 1000) throw new Error('Weather provider busy');
+    if (pending.size >= 4 || now() - lastStartedAt < 1000)
+      throw new Error('Weather provider busy');
     lastStartedAt = now();
     const task = (async () => {
       try {
@@ -101,7 +102,7 @@ export function createStationService({
 }
 export function weatherStationsProxy(options) {
   const snapshot = createStationService(options);
-  const install = (server) =>
+  const install = (server) => {
     server.middlewares.use('/api/weather-stations', async (req, res) => {
       const send = (status, payload) => {
         res.writeHead(status, {
@@ -126,6 +127,7 @@ export function weatherStationsProxy(options) {
         });
       }
     });
+  };
   return {
     name: 'weather-stations-proxy',
     configureServer: install,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStationService } from './weatherStations.js';
+import { createStationService, weatherStationsProxy } from './weatherStations.js';
 import { fetchAmbientStations } from './ambientStations.js';
 const now = Date.parse('2026-10-30T16:30:00Z');
 const row = { icaoId: 'SEQM', lat: 0, lon: -78, obsTime: now / 1000 - 1800 };
@@ -91,4 +91,18 @@ test('Ambient is opt-in, account-only, strips identifiers and preserves nullable
   assert.equal(result[0].rainLastHourMm, 25.4);
   assert.equal(result[0].rainRateMmHr, null);
   assert.doesNotMatch(JSON.stringify(result), /private|test-secret|test-app/);
+});
+
+test('Vite configure hooks install middleware without returning Connect as a post hook', () => {
+  for (const hook of ['configureServer', 'configurePreviewServer']) {
+    let installed = false;
+    const server = { middlewares: { use(path, handler) {
+      assert.equal(path, '/api/weather-stations');
+      assert.equal(typeof handler, 'function');
+      installed = true;
+      return () => assert.fail('Connect must not become a Vite post hook');
+    } } };
+    assert.equal(weatherStationsProxy({ env: {} })[hook](server), undefined);
+    assert.equal(installed, true);
+  }
 });

@@ -166,3 +166,14 @@ separate from fixtures and assertions above. Build and architecture/serializatio
 translation outcomes are recorded in the implementation handoff. Browser visual
 QA remains unavailable: earlier T3 preview Chrome sandbox failure under root and
 html_preview exit 1 were reported in the parent session; no service was changed.
+
+## Parent verification after handoff
+
+The local dev server startup exposed a Vite plugin contract bug: returning
+`middlewares.use()` caused Vite to execute Connect as a post-install hook without
+a request. The hook now returns undefined; a regression test covers both dev
+and preview hook installation. Actual Vite startup succeeds on loopback port 4173.
+The restarted application's real `/api/weather-stations?cell=ecuador` endpoint
+returned schemaVersion=1, stale=false, 24 regional stations. Quito SEQM had an
+observation at 2026-10-30T22:00:00Z (17 °C, 3.086664 m/s wind, BKN); rainfall
+fields remained null. The eight focused provider/layer tests passed.
