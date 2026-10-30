@@ -3004,5 +3004,13 @@
   "Ecuador + Galápagos · infrared, not rain": "Ecuador + Galápagos · infrarrojo, no lluvia",
   "Ecuador + Galápagos": "Ecuador + Galápagos",
   "Ecuador · GOES-19": "Ecuador · GOES-19",
-  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "Infrarrojo GOES-19 banda 13; barridos cada 10 minutos, no lluvia"
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "Infrarrojo GOES-19 banda 13; barridos cada 10 minutos, no lluvia",
+  "CENACE unavailable; CELEC available": "CENACE no disponible; CELEC disponible",
+  "CELEC unavailable; CENACE available": "CELEC no disponible; CENACE disponible",
+  "Ecuador hydro & grid": "Hidroeléctricas y red de Ecuador",
+  "{count} hydro plants · {freshness}": "{count} centrales hidroeléctricas · {freshness}",
+  "Mazar ≤2115 m (sediment risk)": "Mazar ≤2115 m (riesgo por sedimentos)",
+  "Mazar 2115–2120 m (pre-alert)": "Mazar 2115–2120 m (prealerta)",
+  "Reservoir + generation telemetry": "Telemetría de embalse y generación",
+  "Daily cumulative MWh only": "Solo MWh acumulados del día"
 }

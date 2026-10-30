@@ -2864,5 +2864,13 @@
   "Ecuador + Galápagos · infrared, not rain": "エクアドル＋ガラパゴス · 赤外線、降雨ではありません",
   "Ecuador + Galápagos": "エクアドル＋ガラパゴス",
   "Ecuador · GOES-19": "エクアドル · GOES-19",
-  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "GOES-19 バンド13赤外線。10分ごとの観測、降雨ではありません"
+  "GOES-19 Band 13 infrared; 10-minute scans, not rain": "GOES-19 バンド13赤外線。10分ごとの観測、降雨ではありません",
+  "CENACE unavailable; CELEC available": "CENACE 利用不可・CELEC 利用可能",
+  "CELEC unavailable; CENACE available": "CELEC 利用不可・CENACE 利用可能",
+  "Ecuador hydro & grid": "エクアドル水力発電・電力網",
+  "{count} hydro plants · {freshness}": "{count} 水力発電所 · {freshness}",
+  "Mazar ≤2115 m (sediment risk)": "Mazar ≤2115 m（堆砂リスク）",
+  "Mazar 2115–2120 m (pre-alert)": "Mazar 2115–2120 m（事前警戒）",
+  "Reservoir + generation telemetry": "貯水池＋発電テレメトリ",
+  "Daily cumulative MWh only": "日次累積 MWh のみ"
 }

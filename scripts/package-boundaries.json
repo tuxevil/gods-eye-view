@@ -2813,7 +2813,10 @@
       "src/visualStylePolicy.js",
       "src/layers/weatherStations/index.js",
       "src/layers/weatherStations/model.js",
-      "src/layers/weatherStations/source.js"
+      "src/layers/weatherStations/source.js",
+      "src/layers/ecuadorEnergy/index.js",
+      "src/layers/ecuadorEnergy/model.js",
+      "src/layers/ecuadorEnergy/source.js"
     ],
     "external": [
       "hls.js",
@@ -3400,7 +3403,10 @@
       "src/data/geoFileImport.js",
       "src/layers/weatherStations/index.js",
       "src/layers/weatherStations/model.js",
-      "src/layers/weatherStations/source.js"
+      "src/layers/weatherStations/source.js",
+      "src/layers/ecuadorEnergy/index.js",
+      "src/layers/ecuadorEnergy/model.js",
+      "src/layers/ecuadorEnergy/source.js"
     ],
     "external": [
       "hls.js",

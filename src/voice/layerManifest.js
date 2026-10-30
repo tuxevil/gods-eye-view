@@ -282,6 +282,24 @@ const layers = [
     },
   },
   {
+    id: 'ecuador-energy',
+    aliases: ['ecuador energy', 'ecuador hydro', 'mazar', 'celec', 'cenace'],
+    context: false,
+    query: {
+      fields: {
+        cotaMsnm: ['n', 'm s.n.m.'],
+        inflowM3s: ['n', 'm³/s'],
+        flowM3s: ['n', 'm³/s'],
+        dailyCumulativeMWh: ['n', 'MWh'],
+        installedMW: ['n', 'MW'],
+        name: ['t'],
+        operator: ['t'],
+        observedMs: ['ms'],
+      },
+      timeField: 'observedMs',
+    },
+  },
+  {
     id: 'air-quality',
     aliases: ['air quality', 'aqhi', 'smog', 'air pollution'],
     context: false,

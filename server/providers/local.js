@@ -1,3 +1,4 @@
+import { ecuadorEnergyProxy } from './ecuadorEnergy.js';
 import { weatherStationsProxy } from './weatherStations.js';
 import { openSkyProxy } from './aircraft/opensky.js';
 import { celestrakProxy, rocketLaunchesProxy } from './space.js';
@@ -63,6 +64,7 @@ function localProviderPlugins({ realtime, gemini } = {}) {
     windProxy(),
     weatherProxy(),
     weatherStationsProxy(),
+    ecuadorEnergyProxy(),
     cycloneProxy(),
     mapillaryProxy(),
     firePerimetersProxy(),

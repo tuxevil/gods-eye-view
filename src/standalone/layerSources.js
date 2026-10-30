@@ -1,3 +1,4 @@
+import { createEcuadorEnergySource } from '../layers/ecuadorEnergy/source.js';
 import { createWeatherStationSource } from '../layers/weatherStations/source.js';
 import { createDirectionsSource } from '../layers/directions/source.js';
 import { createRecentImagerySource } from '../layers/recentImagery/source.js';
@@ -56,6 +57,7 @@ export function createStandaloneLayerSources(overrides = {}) {
     wind: createWindSource(),
     weather: createWeatherSource(),
     'weather-stations': createWeatherStationSource(),
+    'ecuador-energy': createEcuadorEnergySource(),
     cyclones: createCycloneSource(),
     mapillary: createMapillarySource({
       token: import.meta.env?.MAPILLARY_CLIENT_TOKEN || '',

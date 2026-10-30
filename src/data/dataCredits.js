@@ -100,6 +100,10 @@ export const NYC_DOT_DISCLAIMER =
 
 export const DATA_CREDITS = [
   {
+    key: 'celec-cenace-ecuador-energy',
+    html: 'Ecuador hydroelectric and grid observations: <a href="https://generacioncsr.celec.gob.ec/" target="_blank" rel="noopener">CELEC EP Celec Sur</a> reservoir/flow telemetry and <a href="https://www.cenace.gob.ec/info-operativa/InformacionOperativa.htm" target="_blank" rel="noopener">CENACE</a> preliminary SCADA daily cumulative energy (MWh) and half-hourly power (MW). Informational only; not an operational dispatch or reserve guarantee.',
+  },
+  {
     key: 'awc-weather-stations',
     html: 'Weather observations: <a href="https://aviationweather.gov/data/api/" target="_blank" rel="noopener">NOAA/NWS Aviation Weather Center METAR</a>. Airport point observations; not rainfall estimates.',
   },

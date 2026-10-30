@@ -386,8 +386,13 @@ test('one ESC does one thing — a Cockpit utility disclosure stops later docume
   // they own the same contract: their capture handler is the only one that can
   // keep a later document listener (Cockpit exit, the launcher) off the key, and
   // only the immediate form does it.
-  const utilityEsc = ui.slice(ui.indexOf('if (!displayOpen && !radioOpen) return;'));
-  const claim = utilityEsc.slice(0, utilityEsc.indexOf('setCockpitDisclosure(kind, false'));
+  const utilityEsc = ui.slice(
+    ui.indexOf('if (!displayOpen && !radioOpen) return;'),
+  );
+  const claim = utilityEsc.slice(
+    0,
+    utilityEsc.indexOf('setCockpitDisclosure(kind, false'),
+  );
   assert.match(claim, /event\.preventDefault\(\);/);
   assert.match(claim, /event\.stopImmediatePropagation\(\);/);
   assert.doesNotMatch(
@@ -1065,11 +1070,11 @@ test('the voice TOOL SCHEMA matches the pinned contract — the mission mapping 
   // Radio markup and the complete production-request comparison pin locality.
   // Panel adds timeout and named voice/provider targets; consolidated guidance
   // preserves the mission mapping and globe-rotation arguments.
-  // S2 GhostMaps and weather stations extend generated layer enums and analyst fields.
-  assert.equal(block.length, 31393, 'serialized tool schema length drifted');
+  // S2 GhostMaps, weather stations, and Ecuador energy extend generated layer enums and analyst fields.
+  assert.equal(block.length, 31619, 'serialized tool schema length drifted');
   assert.equal(
     crypto.createHash('sha256').update(block).digest('hex'),
-    'dc99e7a69e8f41466012d0b054ded5a1c18d2c66ebe3dd7adc20dad9b83b5958',
+    '4d2940bf6ab0e079aae6b4cad0d209e408f37de617f3be7c1428239967634ed6',
     'the first-run missions must ride EXISTING tools: no schema edit, no cache bust',
   );
   const instructions = fs.readFileSync(
