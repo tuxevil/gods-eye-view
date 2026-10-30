@@ -444,3 +444,11 @@ NOAA density imagery with the raw GLM product.
 ## In-app attribution
 
 The required Google Maps / Cesium credit renders on the on-globe credit line (`#cesium-credits`, bottom-left) and must stay visible — including in clean-view and recording modes (the whole line, logo + "Google Maps" + the "Data attribution" link, stays on screen; only the GEV panels/HUD fade). The layer-specific credits (adsb.lol, adsbdb, TeleGeography, OSM datacenters/dams/roads, NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic, GBFS, Radio Browser, OpenSky, AISStream) are registered into the expandable **"Data attribution"** popover on that credit line via `viewer.creditDisplay.addStaticCredit(new Cesium.Credit(html, /* showOnScreen */ false))` — see `src/data/dataCredits.js`. When you add a new data source, add its license and attribution to this file **and** append an entry to `DATA_CREDITS` in `src/data/dataCredits.js` so it surfaces in the app.
+
+## Weather station observations
+
+**NOAA/NWS Aviation Weather Center METAR** — [documented public API](https://aviationweather.gov/data/api/), worldwide airport point observations. The server proxy defaults to Ecuador including Galápagos and uses bounded 10° cells at closer map scales. Temperature °C, wind m/s, altimeter pressure hPa; relative humidity is derived from reported temperature/dew point. Missing measurements stay unavailable. METAR clouds/conditions are not quantitative rainfall. Source observation UTC and freshness appear in selected cards; 90-minute-old observations are marked stale. Five-minute cache, bounded stale fallback, no credentials required. U.S. government source; observe API restrictions and source attribution. No aviation/alerting guarantee.
+
+**Optional Ambient Weather** — [official account-authorized REST API](https://github.com/ambient-weather/api-docs/blob/master/apiary.apib); application + user keys required server-side. Explicit public station allowlist only. No public network scraping, no assumption of network-wide data rights. Owner/vendor permissions govern publication. Adapter tested with mocks; authenticated live access was not tested. Hourly rain accumulation remains mm, not instantaneous mm/h.
+
+[Implementation, LIVE probe evidence, activation and remaining GOES/energy work](docs/research/weather-integration-implementation.md).
