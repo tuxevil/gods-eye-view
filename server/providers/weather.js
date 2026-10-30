@@ -1,3 +1,9 @@
+import {
+  GOES19_METADATA,
+  GOES19_DELAY_MS,
+  parseGoes19Metadata,
+  goes19MapUrl,
+} from './goes19.js';
 import { readResponseTextCapped } from './common/http.js';
 import { readWindBody as readBytesCapped } from '../../src/sources/windBody.js';
 
@@ -37,6 +43,17 @@ const PRODUCTS = Object.freeze({
       'Global mosaic with incomplete polar coverage; nominal coverage 60°S–60°N.',
     description:
       'Longwave infrared cloud and land/sea temperature patterns, approximately 3 km; hourly updates with 2–3 hour source latency. Not a cloud-only mask.',
+    image: Object.freeze({ width: 2048, height: 1024 }),
+  }),
+  'clouds-goes19': Object.freeze({
+    service: 'goes19',
+    title: 'GOES-19 infrared · Ecuador',
+    source: 'NOAA GOES-19 via UW–Madison SSEC RealEarth',
+    attribution: 'NOAA/NESDIS GOES-19; UW–Madison SSEC RealEarth',
+    coverage:
+      'Ecuador, Galápagos and nearby South America: 100°W–60°W, 16°S–4°N; cropped from full disk.',
+    description:
+      'Observed ABI Band 13 (10.3 µm) infrared cloud and surface brightness patterns; approximately 2 km at nadir, 10-minute scans. Not rain or a rainfall estimate. Exact catalog scan timestamps; delivery latency varies.',
     image: Object.freeze({ width: 2048, height: 1024 }),
   }),
   'clouds-regional': Object.freeze({
@@ -315,7 +332,11 @@ export function weatherProxy({
     const response = await fetchImpl(url, {
       signal,
       redirect: 'error',
-      headers: { Accept: image ? 'image/png' : 'application/xml,text/xml' },
+      headers: {
+        Accept: image
+          ? 'image/png'
+          : 'application/xml,text/xml,application/json',
+      },
     });
     if (
       !response.ok ||
@@ -348,14 +369,19 @@ export function weatherProxy({
       )
         throw failure('weather_upstream_unavailable');
       attempts.set(product, now());
-      const url = `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
+      const url =
+        product === 'clouds-goes19'
+          ? GOES19_METADATA
+          : `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
       const xml = await shared(
         `metadata:${spec.service}`,
         (activeSignal) => upstream(url, activeSignal),
         signal,
       );
       const value = {
-        ...parseWeatherCapabilities(xml, product, now()),
+        ...(product === 'clouds-goes19'
+          ? parseGoes19Metadata(xml, now())
+          : parseWeatherCapabilities(xml, product, now())),
         fetchedAt: now(),
       };
       metadata.set(product, value);
@@ -382,13 +408,17 @@ export function weatherProxy({
   function describe(product, value) {
     const spec = PRODUCTS[product];
     const time = value?.times.at(-1) ?? null;
+    const delayed =
+      product === 'clouds-goes19' &&
+      time &&
+      now() - Date.parse(time) > GOES19_DELAY_MS;
     return {
       schemaVersion: 1,
       product,
       title: spec.title,
       coverage: spec.coverage,
       description: spec.description,
-      source: 'NOAA nowCOAST',
+      source: spec.source ?? 'NOAA nowCOAST',
       attribution: spec.attribution ?? 'NOAA/NWS/NESDIS nowCOAST',
       bounds: value?.bounds ?? null,
       times: value?.times ?? [],
@@ -396,13 +426,22 @@ export function weatherProxy({
       time,
       observedAt: time,
       fetchedAt: value?.fetchedAt ?? null,
-      stale: value?.stale ?? true,
+      stale: Boolean(!value || value.stale || delayed),
+      ...(product === 'clouds-goes19'
+        ? {
+            latencyMinutes: time
+              ? Math.max(0, Math.floor((now() - Date.parse(time)) / 60_000))
+              : null,
+          }
+        : {}),
       unavailable: !value,
       reason: !value
         ? 'Weather imagery unavailable'
         : value.stale
           ? 'Cached weather metadata; upstream unavailable'
-          : null,
+          : delayed
+            ? 'Source observations delayed'
+            : null,
       tileSize: 256,
       maxLevel: 6,
       tilingScheme: 'geographic',
@@ -496,7 +535,8 @@ export function weatherProxy({
       controller.signal.throwIfAborted();
       if (
         !value.allowedTimes.includes(time) ||
-        now() - Date.parse(time) > 24 * HOUR
+        now() - Date.parse(time) >
+          (product === 'clouds-goes19' ? 3 * HOUR : 24 * HOUR)
       )
         throw failure('unknown_weather_time', 400);
       if (
@@ -561,7 +601,14 @@ export function weatherProxy({
         try {
           const bytes = await shared(
             `image:${key}`,
-            (signal) => upstream(upstreamUrl.href, signal, imageShape),
+            (signal) =>
+              upstream(
+                product === 'clouds-goes19'
+                  ? goes19MapUrl({ time, bbox, width, height })
+                  : upstreamUrl.href,
+                signal,
+                imageShape,
+              ),
             controller.signal,
           );
           rememberTile(key, bytes);

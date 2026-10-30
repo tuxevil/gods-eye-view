@@ -1159,3 +1159,154 @@ test('large tile validation checks requested dimensions and bounded compressed b
   });
   assert.equal((await request(`${tile()}&size=1024`)).statusCode, 200);
 });
+
+const goesCatalog = (times = ['20260916.020820']) =>
+  JSON.stringify([
+    {
+      id: 'G19-ABI-FD-BAND13',
+      type: 'raster',
+      projection: 'epsg:4326',
+      times,
+    },
+  ]);
+const GOES_TIME = '2026-09-16T02:08:20.000Z';
+
+test('GOES-19 Ecuador manifest and images use exact catalog layers and geographic WMS', async () => {
+  const calls = [];
+  const { request } = install({
+    fetchImpl: async (url, options) => {
+      calls.push({ url: new URL(url), options });
+      return url.includes('/api/products')
+        ? new Response(goesCatalog())
+        : image(png(2048, 1024));
+    },
+  });
+  const manifest = body(await request('/manifest?product=clouds-goes19'));
+  assert.equal(manifest.latest, GOES_TIME);
+  assert.equal(manifest.stale, false);
+  assert.match(manifest.source, /NOAA GOES-19.*SSEC RealEarth/);
+  assert.match(manifest.description, /Not rain/);
+  assert.equal(manifest.latencyMinutes, 3);
+  for (const [lon, lat] of [
+    [-78.5, -0.2],
+    [-79.0, -2.0],
+    [-91, -1],
+  ]) {
+    assert.ok(lon > manifest.bounds.west && lon < manifest.bounds.east);
+    assert.ok(lat > manifest.bounds.south && lat < manifest.bounds.north);
+  }
+  assert.equal(
+    (await request(wholeImage(GOES_TIME, 'clouds-goes19'))).statusCode,
+    200,
+  );
+  const map = calls[1].url;
+  assert.equal(map.origin, 'https://realearth.ssec.wisc.edu');
+  assert.equal(map.pathname, '/cgi-bin/mapserv');
+  assert.equal(map.searchParams.get('map'), 'G19-ABI-FD-BAND13.map');
+  assert.equal(
+    map.searchParams.get('layers'),
+    'G19-ABI-FD-BAND13_20260916_020820',
+  );
+  assert.equal(map.searchParams.get('srs'), 'EPSG:4326');
+  assert.equal(map.searchParams.get('bbox'), '-100,-16,-60,4');
+  assert.equal(map.searchParams.has('time'), false, 'no nearest-time lookup');
+  assert.equal(calls[1].options.redirect, 'error');
+  await request(wholeImage(GOES_TIME, 'clouds-goes19'));
+  assert.equal(calls.length, 2, 'same bounded cache as existing weather');
+  for (const time of [TIME, '2026-09-16T02:08:20Z', 'latest'])
+    assert.equal(
+      (await request(wholeImage(time, 'clouds-goes19'))).statusCode,
+      400,
+    );
+  assert.equal(calls.length, 2);
+});
+
+test('GOES-19 history is explicit, bounded and rejects malformed/future catalogs', async () => {
+  const { parseGoes19Metadata } =
+    await import('../../server/providers/goes19.js');
+  const stamps = Array.from({ length: 40 }, (_, i) =>
+    new Date(NOW - (40 - i) * 240000)
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace('T', '.')
+      .replace('.000Z', ''),
+  );
+  const parsed = parseGoes19Metadata(goesCatalog(stamps), NOW);
+  assert.equal(parsed.times.length, 13);
+  assert.equal(parsed.allowedTimes.length, 26);
+  assert.equal(parsed.times.at(-1), new Date(NOW - 240000).toISOString());
+  for (const text of [
+    goesCatalog(['20260230.000000']),
+    goesCatalog(['20260917.000000']),
+    goesCatalog(['20260916.000000/20260916.020000/PT10M']),
+    goesCatalog(['20260915.220000']),
+    goesCatalog([]),
+    goesCatalog(Array(513).fill('20260916.020820')),
+    goesCatalog().replace('G19-', 'G18-'),
+    goesCatalog().replace('4326', '3857'),
+  ])
+    assert.throws(() => parseGoes19Metadata(text, NOW));
+});
+
+test('GOES-19 delay and upstream failure never advance observation time', async () => {
+  let clock = NOW;
+  let fail = false;
+  const { request } = install({
+    now: () => clock,
+    fetchImpl: async () => {
+      if (fail) throw new Error('upstream failed');
+      return new Response(goesCatalog());
+    },
+  });
+  const first = body(await request('/manifest?product=clouds-goes19'));
+  clock += 41 * 60_000;
+  const delayed = body(await request('/manifest?product=clouds-goes19'));
+  assert.equal(delayed.stale, true);
+  assert.equal(delayed.reason, 'Source observations delayed');
+  assert.equal(delayed.observedAt, first.observedAt);
+  fail = true;
+  clock += 121000;
+  const stale = body(await request('/manifest?product=clouds-goes19'));
+  assert.equal(stale.stale, true);
+  assert.equal(stale.fetchedAt, delayed.fetchedAt);
+  assert.equal(stale.observedAt, first.observedAt);
+  assert.equal(
+    (await request(wholeImage(GOES_TIME, 'clouds-goes19'))).statusCode,
+    503,
+  );
+  clock += 3600_001;
+  assert.equal(
+    body(await request('/manifest?product=clouds-goes19')).unavailable,
+    true,
+  );
+});
+
+test('GOES-19 timeout, invalid image and provider failure fail closed', async () => {
+  for (const fetchImpl of [
+    async () => new Response('unavailable', { status: 503 }),
+    async (_url, { signal }) =>
+      new Promise((_resolve, reject) =>
+        signal.addEventListener('abort', () => reject(new Error('timeout')), {
+          once: true,
+        }),
+      ),
+  ]) {
+    const { request } = install({ fetchImpl, timeoutMs: 5 });
+    const unavailable = body(await request('/manifest?product=clouds-goes19'));
+    assert.equal(unavailable.unavailable, true);
+    assert.deepEqual(unavailable.times, []);
+    assert.equal(unavailable.observedAt, null);
+  }
+  const { request } = install({
+    fetchImpl: async (url) =>
+      url.includes('/api/products')
+        ? new Response(goesCatalog())
+        : new Response('<ServiceException/>', {
+            headers: { 'Content-Type': 'text/xml' },
+          }),
+  });
+  assert.equal(
+    (await request(wholeImage(GOES_TIME, 'clouds-goes19'))).statusCode,
+    503,
+  );
+});
