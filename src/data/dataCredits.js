@@ -99,6 +99,8 @@ export const NYC_DOT_DISCLAIMER =
   'The public is advised to observe posted signage for compliance with applicable laws and regulations.';
 
 export const DATA_CREDITS = [
+  {key:'awc-weather-stations', html:'Weather observations: <a href="https://aviationweather.gov/data/api/" target="_blank" rel="noopener">NOAA/NWS Aviation Weather Center METAR</a>. Airport point observations; not rainfall estimates.'},
+  {key:'ambient-weather-stations', html:'Optional authorized station observations: <a href="https://ambientweather.com" target="_blank" rel="noopener">Ambient Weather</a>. Account and station owner permissions apply.'},
   // ── Live sources ────────────────────────────────────────────────
   {
     key: 'opensky',

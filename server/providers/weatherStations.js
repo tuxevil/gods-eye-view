@@ -11,6 +11,7 @@ export function createStationService({
   const cache = new Map();
   const pending = new Map();
   const failures = new Map();
+  let lastStartedAt = -Infinity;
   return async function snapshot(cell = 'ecuador') {
     let bbox;
     if (cell === 'ecuador') bbox = '-6,-92,2,-74';
@@ -37,7 +38,8 @@ export function createStationService({
     if (old?.retryAfter > now()) return { ...old, stale: true };
     if (pending.has(cell)) return pending.get(cell);
     // A bounded cache also bounds arbitrary worldwide exploration.
-    if (pending.size >= 4) throw new Error('Weather provider busy');
+    if (pending.size >= 4 || now() - lastStartedAt < 1000) throw new Error('Weather provider busy');
+    lastStartedAt = now();
     const task = (async () => {
       try {
         const signal = AbortSignal.timeout(12_000);

@@ -1,3 +1,4 @@
+import { weatherStationsProxy } from './weatherStations.js';
 import { openSkyProxy } from './aircraft/opensky.js';
 import { celestrakProxy, rocketLaunchesProxy } from './space.js';
 import { tomtomProxy } from './traffic.js';
@@ -61,6 +62,7 @@ function localProviderPlugins({ realtime, gemini } = {}) {
     googlePlacesContextProxy(),
     windProxy(),
     weatherProxy(),
+    weatherStationsProxy(),
     cycloneProxy(),
     mapillaryProxy(),
     firePerimetersProxy(),

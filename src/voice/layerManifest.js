@@ -265,6 +265,23 @@ const layers = [
     noQuery: 'map overlay; no countable records',
   },
   {
+    id: 'weather-stations',
+    aliases: ['weather stations', 'METAR', 'airport weather'],
+    context: false,
+    query: {
+      fields: {
+        tempC: ['n', '°C'],
+        humidity: ['n', '%'],
+        windMs: ['n', 'm/s'],
+        pressureHpa: ['n', 'hPa'],
+        provider: ['t'],
+        name: ['t'],
+        observedMs: ['ms'],
+      },
+      timeField: 'observedMs',
+    },
+  },
+  {
     id: 'air-quality',
     aliases: ['air quality', 'aqhi', 'smog', 'air pollution'],
     context: false,

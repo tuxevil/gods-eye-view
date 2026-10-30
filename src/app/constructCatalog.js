@@ -1,3 +1,8 @@
+import * as Cesium from 'cesium';
+import * as stationPicking from '../data/pickRegistry.js';
+import { isPointerFree } from '../data/inputOwnership.js';
+import { overlayHost } from './layers/overlayHost.js';
+import { createWeatherStationsLayer } from '../layers/weatherStations/index.js';
 import { resolveCatalogSources } from './sourceComposition.js';
 import { createWeatherClock } from '../layers/weather/clock.js';
 import { createWeatherLayer } from '../layers/weather/index.js';
@@ -121,6 +126,14 @@ export function createApplicationCatalog({
         }),
         createApplicationEarthquakes({ source: sources.earthquakes }),
         createApplicationAirQuality({ source: sources['air-quality'] }),
+        createWeatherStationsLayer({
+          source: sources['weather-stations'],
+          overlayHost,
+          picking: stationPicking,
+          pointer: { isPointerFree },
+          handlerFactory: (viewer) =>
+            new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
+        }),
         createApplicationFirePerimeters({
           source: sources['fire-perimeters'],
         }),

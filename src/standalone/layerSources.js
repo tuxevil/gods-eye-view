@@ -1,3 +1,4 @@
+import { createWeatherStationSource } from '../layers/weatherStations/source.js';
 import { createDirectionsSource } from '../layers/directions/source.js';
 import { createRecentImagerySource } from '../layers/recentImagery/source.js';
 import { createOpenFreeMapSource } from '../sources/openFreeMap.js';
@@ -54,6 +55,7 @@ export function createStandaloneLayerSources(overrides = {}) {
     's2-ghostmaps': createGhostMapsSource(),
     wind: createWindSource(),
     weather: createWeatherSource(),
+    'weather-stations': createWeatherStationSource(),
     cyclones: createCycloneSource(),
     mapillary: createMapillarySource({
       token: import.meta.env?.MAPILLARY_CLIENT_TOKEN || '',
