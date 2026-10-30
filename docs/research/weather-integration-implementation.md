@@ -177,3 +177,10 @@ The restarted application's real `/api/weather-stations?cell=ecuador` endpoint
 returned schemaVersion=1, stale=false, 24 regional stations. Quito SEQM had an
 observation at 2026-10-30T22:00:00Z (17 °C, 3.086664 m/s wind, BKN); rainfall
 fields remained null. The eight focused provider/layer tests passed.
+
+Final parent checks: `npm run check:boundaries` passed (1,042 modules,
+81 portable entries and package checks); `npm run layer-token:check --
+--base-ref main` passed (32 published, 1 new); final `npm run build` passed.
+Build reports the existing large-chunk warning. Full-suite completion and browser
+visual QA are not claimed; the eight targeted tests, actual Vite startup and
+LIVE endpoint above were verified directly.
