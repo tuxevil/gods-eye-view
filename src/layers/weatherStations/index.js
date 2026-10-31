@@ -170,7 +170,7 @@ export function createWeatherStationsLayer({
         stale = result.stale;
         lastUpdate = result.fetchedAt;
         error = result.ambientError
-          ? 'Ambient unavailable; METAR available'
+          ? t('Ambient unavailable; METAR available')
           : null;
         data.entities.removeAll();
         for (const r of readings) {

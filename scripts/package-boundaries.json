@@ -2816,7 +2816,10 @@
       "src/layers/weatherStations/source.js",
       "src/layers/ecuadorEnergy/index.js",
       "src/layers/ecuadorEnergy/model.js",
-      "src/layers/ecuadorEnergy/source.js"
+      "src/layers/ecuadorEnergy/source.js",
+      "src/layers/sngrEvents/index.js",
+      "src/layers/sngrEvents/model.js",
+      "src/layers/sngrEvents/source.js"
     ],
     "external": [
       "hls.js",
@@ -3406,7 +3409,10 @@
       "src/layers/weatherStations/source.js",
       "src/layers/ecuadorEnergy/index.js",
       "src/layers/ecuadorEnergy/model.js",
-      "src/layers/ecuadorEnergy/source.js"
+      "src/layers/ecuadorEnergy/source.js",
+      "src/layers/sngrEvents/index.js",
+      "src/layers/sngrEvents/model.js",
+      "src/layers/sngrEvents/source.js"
     ],
     "external": [
       "hls.js",

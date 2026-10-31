@@ -3,6 +3,7 @@ import * as stationPicking from '../data/pickRegistry.js';
 import { isPointerFree } from '../data/inputOwnership.js';
 import { overlayHost } from './layers/overlayHost.js';
 import { createEcuadorEnergyLayer } from '../layers/ecuadorEnergy/index.js';
+import { createSngrEventsLayer } from '../layers/sngrEvents/index.js';
 import { createWeatherStationsLayer } from '../layers/weatherStations/index.js';
 import { resolveCatalogSources } from './sourceComposition.js';
 import { createWeatherClock } from '../layers/weather/clock.js';
@@ -137,6 +138,14 @@ export function createApplicationCatalog({
         }),
         createEcuadorEnergyLayer({
           source: sources['ecuador-energy'],
+          overlayHost,
+          picking: stationPicking,
+          pointer: { isPointerFree },
+          handlerFactory: (viewer) =>
+            new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
+        }),
+        createSngrEventsLayer({
+          source: sources['sngr-events'],
           overlayHost,
           picking: stationPicking,
           pointer: { isPointerFree },

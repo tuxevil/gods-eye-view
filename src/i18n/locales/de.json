@@ -2942,5 +2942,14 @@
   "Mazar ≤2115 m (sediment risk)": "Mazar ≤2115 m (Sedimentrisiko)",
   "Mazar 2115–2120 m (pre-alert)": "Mazar 2115–2120 m (Vorwarnung)",
   "Reservoir + generation telemetry": "Stausee- + Erzeugungstelemetrie",
-  "Daily cumulative MWh only": "Nur kumulierte Tages-MWh"
+  "Daily cumulative MWh only": "Nur kumulierte Tages-MWh",
+  "SNGR rainy-season feed unavailable; national feed active": "SNGR-Regenzeit-Feed nicht verfügbar; nationaler Feed aktiv",
+  "SNGR national feed unavailable; rainy-season feed active": "Nationaler SNGR-Feed nicht verfügbar; Regenzeit-Feed aktiv",
+  "SNGR adverse events (Ecuador)": "SNGR-Schadensereignisse (Ecuador)",
+  "{count} SNGR reports · {freshness}": "{count} SNGR-Meldungen · {freshness}",
+  "Flood / inundation": "Überschwemmung / Sturzflut",
+  "Landslide / erosion": "Erdrutsch / Erosion",
+  "Heavy rain / wind": "Starkregen / Sturm",
+  "Forest fire": "Waldbrand",
+  "Ambient unavailable; METAR available": "Ambient nicht verfügbar; METAR verfügbar"
 }

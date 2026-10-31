@@ -3082,5 +3082,14 @@
   "Mazar ≤2115 m (sediment risk)": "Масар ≤2115 м (ризик наносів)",
   "Mazar 2115–2120 m (pre-alert)": "Масар 2115–2120 м (попередження)",
   "Reservoir + generation telemetry": "Телеметрія водосховища та генерації",
-  "Daily cumulative MWh only": "Лише накопичені МВт·год за добу"
+  "Daily cumulative MWh only": "Лише накопичені МВт·год за добу",
+  "SNGR rainy-season feed unavailable; national feed active": "Потік сезону дощів SNGR недоступний; національний потік активний",
+  "SNGR national feed unavailable; rainy-season feed active": "Національний потік SNGR недоступний; потік сезону дощів активний",
+  "SNGR adverse events (Ecuador)": "Несприятливі події SNGR (Еквадор)",
+  "{count} SNGR reports · {freshness}": "{count} звітів SNGR · {freshness}",
+  "Flood / inundation": "Повінь / підтоплення",
+  "Landslide / erosion": "Зсув / ерозія",
+  "Heavy rain / wind": "Сильні дощі / вітер",
+  "Forest fire": "Лісова пожежа",
+  "Ambient unavailable; METAR available": "Ambient недоступний; METAR доступний"
 }

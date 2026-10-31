@@ -300,6 +300,23 @@ const layers = [
     },
   },
   {
+    id: 'sngr-events',
+    aliases: ['sngr', 'ecuador events', 'ecuador floods', 'ecuador landslides'],
+    context: false,
+    query: {
+      fields: {
+        evento: ['t'],
+        causa: ['t'],
+        hazardCategory: ['t'],
+        provincia: ['t'],
+        canton: ['t'],
+        estado: ['t'],
+        eventMs: ['ms'],
+      },
+      timeField: 'eventMs',
+    },
+  },
+  {
     id: 'air-quality',
     aliases: ['air quality', 'aqhi', 'smog', 'air pollution'],
     context: false,

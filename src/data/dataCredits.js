@@ -100,6 +100,10 @@ export const NYC_DOT_DISCLAIMER =
 
 export const DATA_CREDITS = [
   {
+    key: 'sngr-ecuador-events',
+    html: 'Ecuador adverse event reports: <a href="https://sgrportal.gestionderiesgos.gob.ec/" target="_blank" rel="noopener">Secretaría Nacional de Gestión de Riesgos (SNGR)</a> REDM/EVIN field incident records. Dated field reports with publication lag; not a real-time alert or static susceptibility map.',
+  },
+  {
     key: 'celec-cenace-ecuador-energy',
     html: 'Ecuador hydroelectric and grid observations: <a href="https://generacioncsr.celec.gob.ec/" target="_blank" rel="noopener">CELEC EP Celec Sur</a> reservoir/flow telemetry and <a href="https://www.cenace.gob.ec/info-operativa/InformacionOperativa.htm" target="_blank" rel="noopener">CENACE</a> preliminary SCADA daily cumulative energy (MWh) and half-hourly power (MW). Informational only; not an operational dispatch or reserve guarantee.',
   },

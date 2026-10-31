@@ -1070,11 +1070,11 @@ test('the voice TOOL SCHEMA matches the pinned contract — the mission mapping 
   // Radio markup and the complete production-request comparison pin locality.
   // Panel adds timeout and named voice/provider targets; consolidated guidance
   // preserves the mission mapping and globe-rotation arguments.
-  // S2 GhostMaps, weather stations, and Ecuador energy extend generated layer enums and analyst fields.
-  assert.equal(block.length, 31619, 'serialized tool schema length drifted');
+  // S2 GhostMaps, weather stations, Ecuador energy, and SNGR events extend generated layer enums and analyst fields.
+  assert.equal(block.length, 31767, 'serialized tool schema length drifted');
   assert.equal(
     crypto.createHash('sha256').update(block).digest('hex'),
-    '4d2940bf6ab0e079aae6b4cad0d209e408f37de617f3be7c1428239967634ed6',
+    'ec8954f89ccc4bdb190b05be4a6b68e7cb972fb1f7dfbe95756739a054a5fcb6',
     'the first-run missions must ride EXISTING tools: no schema edit, no cache bust',
   );
   const instructions = fs.readFileSync(
