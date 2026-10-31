@@ -317,6 +317,44 @@ const layers = [
     },
   },
   {
+    id: 'watersheds',
+    aliases: ['cuencas'],
+    context: false,
+    query: {
+      fields: { areaKm2: ['n'] },
+      caveat:
+        'BasinATLAS units, geographic containment only; not reservoir catchments or upstream contribution. Coordinates are label anchors.',
+    },
+  },
+  {
+    id: 'igepn-geophysics',
+    aliases: [
+      'igepn',
+      'ecuador earthquakes',
+      'ecuador volcanoes',
+      'volcanic seismicity',
+    ],
+    context: false,
+    query: {
+      fields: {
+        recordType: ['t'],
+        volcanoName: ['t'],
+        signalType: ['t'],
+        name: ['t'],
+        magnitude: ['n'],
+        depthKm: ['n', 'km'],
+        events7d: ['n'],
+        events30d: ['n'],
+        events90d: ['n'],
+        observedMs: ['ms'],
+      },
+      timeField: 'observedMs',
+      window: '365 days tectonic; 90 days volcanic; 2021 edifice catalog',
+      caveat:
+        'Volcanic seismic signals are observations, not eruption forecasts or alert levels; volcano catalog is not a live activity report.',
+    },
+  },
+  {
     id: 'air-quality',
     aliases: ['air quality', 'aqhi', 'smog', 'air pollution'],
     context: false,
@@ -577,6 +615,7 @@ const SELF_EVIDENT_IDS = new Set([
   'radio',
   'wind',
   'directions',
+  'watersheds',
   // The brand is already the layer id; all spoken aliases remain accepted.
   's2-ghostmaps',
 ]);

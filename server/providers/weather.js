@@ -1,4 +1,15 @@
 import {
+  IMERG_PRODUCT,
+  IMERG_METADATA,
+  IMERG_DELAY_MS,
+  parseImergMetadata,
+  imergMapUrl,
+  imergPeriod,
+  imergPoint,
+  imergDailyUrl,
+  parseImergDaily,
+} from './imerg.js';
+import {
   GOES19_METADATA,
   GOES19_DELAY_MS,
   parseGoes19Metadata,
@@ -10,6 +21,16 @@ import { readWindBody as readBytesCapped } from '../../src/sources/windBody.js';
 const BASE = 'https://nowcoast.noaa.gov/geoserver/observations/';
 const HOUR = 3600_000;
 const PRODUCTS = Object.freeze({
+  [IMERG_PRODUCT]: Object.freeze({
+    service: 'imerg',
+    title: 'IMERG satellite precipitation · 30-minute mean rate',
+    source: 'NASA GIBS · GPM IMERG Early/Final V07',
+    attribution: 'NASA GPM / PPS; NASA GIBS (ESDIS)',
+    coverage: 'Ecuador + Galápagos: 100°W–60°W, 16°S–4°N crop of global IMERG.',
+    description:
+      'SATELLITE ESTIMATE · 30-minute mean precipitation rate (mm/h), not period accumulation or radar. 0.1° source grid (~11 km at equator); Early Run about 5 hours delayed, replaced by Final when available. Transparent pixels include missing and insignificant precipitation; never establish dry conditions or confirmed floods.',
+    image: Object.freeze({ width: 2048, height: 1024 }),
+  }),
   lightning: Object.freeze({
     service: 'lightning_detection',
     layer: 'ldn_lightning_strike_density',
@@ -259,6 +280,8 @@ export function weatherProxy({
 } = {}) {
   const metadata = new Map();
   const attempts = new Map();
+  const dailyCache = new Map();
+  const dailyAttempts = new Map();
   const operations = new Map();
   const pending = [];
   const tiles = new Map();
@@ -370,18 +393,22 @@ export function weatherProxy({
         throw failure('weather_upstream_unavailable');
       attempts.set(product, now());
       const url =
-        product === 'clouds-goes19'
-          ? GOES19_METADATA
-          : `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
+        product === IMERG_PRODUCT
+          ? IMERG_METADATA
+          : product === 'clouds-goes19'
+            ? GOES19_METADATA
+            : `${BASE}${spec.service}/ows?service=WMS&version=1.3.0&request=GetCapabilities`;
       const xml = await shared(
         `metadata:${spec.service}`,
         (activeSignal) => upstream(url, activeSignal),
         signal,
       );
       const value = {
-        ...(product === 'clouds-goes19'
-          ? parseGoes19Metadata(xml, now())
-          : parseWeatherCapabilities(xml, product, now())),
+        ...(product === IMERG_PRODUCT
+          ? parseImergMetadata(xml, now())
+          : product === 'clouds-goes19'
+            ? parseGoes19Metadata(xml, now())
+            : parseWeatherCapabilities(xml, product, now())),
         fetchedAt: now(),
       };
       metadata.set(product, value);
@@ -409,11 +436,22 @@ export function weatherProxy({
     const spec = PRODUCTS[product];
     const time = value?.times.at(-1) ?? null;
     const delayed =
-      product === 'clouds-goes19' &&
+      ['clouds-goes19', IMERG_PRODUCT].includes(product) &&
       time &&
-      now() - Date.parse(time) > GOES19_DELAY_MS;
+      now() - Date.parse(time) >
+        (product === IMERG_PRODUCT ? IMERG_DELAY_MS : GOES19_DELAY_MS);
     return {
       schemaVersion: 1,
+      ...(product === IMERG_PRODUCT
+        ? {
+            measurement: 'satellite_estimate',
+            units: 'mm/h',
+            periods: value?.times.map(imergPeriod) ?? [],
+            processing:
+              'Early/Final V07; per-frame run not supplied by GIBS best',
+            accumulationMm: null,
+          }
+        : {}),
       product,
       title: spec.title,
       coverage: spec.coverage,
@@ -427,7 +465,7 @@ export function weatherProxy({
       observedAt: time,
       fetchedAt: value?.fetchedAt ?? null,
       stale: Boolean(!value || value.stale || delayed),
-      ...(product === 'clouds-goes19'
+      ...(['clouds-goes19', IMERG_PRODUCT].includes(product)
         ? {
             latencyMinutes: time
               ? Math.max(0, Math.floor((now() - Date.parse(time)) / 60_000))
@@ -470,14 +508,20 @@ export function weatherProxy({
       const url = new URL(req.url, 'http://localhost');
       if (req.method !== 'GET')
         return json(res, 405, { error: 'method_not_allowed' });
-      if (!['/manifest', '/tile', '/image'].includes(url.pathname))
+      if (
+        !['/manifest', '/tile', '/image', '/accumulation'].includes(
+          url.pathname,
+        )
+      )
         return json(res, 404, { error: 'not_found' });
       const allowed =
-        url.pathname === '/manifest'
-          ? ['product']
-          : url.pathname === '/image'
-            ? ['product', 'time', 'size', 'bbox']
-            : ['product', 'time', 'z', 'x', 'y', 'size'];
+        url.pathname === '/accumulation'
+          ? ['lat', 'lon']
+          : url.pathname === '/manifest'
+            ? ['product']
+            : url.pathname === '/image'
+              ? ['product', 'time', 'size', 'bbox']
+              : ['product', 'time', 'z', 'x', 'y', 'size'];
       if (
         req.url.length > 512 ||
         [...url.searchParams.keys()].some(
@@ -486,6 +530,47 @@ export function weatherProxy({
         )
       )
         return json(res, 400, { error: 'invalid_weather_query' });
+      if (url.pathname === '/accumulation') {
+        const point = imergPoint(
+          url.searchParams.get('lat'),
+          url.searchParams.get('lon'),
+        );
+        const key = `${point.lat},${point.lon}`;
+        const old = dailyCache.get(key);
+        if (old && now() - old.fetchedAt < 3600_000) return json(res, 200, old);
+        try {
+          if (
+            now() - (dailyAttempts.get(key) ?? -Infinity) < 60_000 &&
+            !operations.has(`daily:${key}`)
+          )
+            throw failure('weather_upstream_unavailable');
+          if (
+            !operations.has(`daily:${key}`) &&
+            [...operations.keys()].filter((k) => k.startsWith('daily:'))
+              .length >= 2
+          )
+            throw failure('weather_busy', 429);
+          dailyAttempts.set(key, now());
+          while (dailyAttempts.size > 16)
+            dailyAttempts.delete(dailyAttempts.keys().next().value);
+          const text = await shared(
+            `daily:${key}`,
+            (signal) => upstream(imergDailyUrl(point, now()), signal),
+            controller.signal,
+          );
+          const value = parseImergDaily(text, point, now());
+          dailyCache.delete(key);
+          dailyCache.set(key, value);
+          while (dailyCache.size > 16)
+            dailyCache.delete(dailyCache.keys().next().value);
+          return json(res, 200, value);
+        } catch (error) {
+          controller.signal.throwIfAborted();
+          if (old && now() - old.fetchedAt < 24 * HOUR)
+            return json(res, 200, { ...old, stale: true });
+          throw error;
+        }
+      }
       const product = url.searchParams.get('product');
       if (!Object.hasOwn(PRODUCTS, product))
         return json(res, 400, { error: 'unknown_weather_product' });
@@ -603,9 +688,11 @@ export function weatherProxy({
             `image:${key}`,
             (signal) =>
               upstream(
-                product === 'clouds-goes19'
-                  ? goes19MapUrl({ time, bbox, width, height })
-                  : upstreamUrl.href,
+                product === IMERG_PRODUCT
+                  ? imergMapUrl({ time, bbox, width, height })
+                  : product === 'clouds-goes19'
+                    ? goes19MapUrl({ time, bbox, width, height })
+                    : upstreamUrl.href,
                 signal,
                 imageShape,
               ),

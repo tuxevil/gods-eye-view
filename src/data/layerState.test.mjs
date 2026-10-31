@@ -202,8 +202,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 35);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 35);
+  assert.equal(REGISTERED_LAYER_IDS.length, 37);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 37);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.deepEqual(LEGACY_LAYER_STATE_TOKENS, {
@@ -242,19 +242,19 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   for (const [id, token] of Object.entries(LEGACY_LAYER_STATE_TOKENS)) {
     assert.equal(LAYER_STATE_TOKEN_RESERVATIONS[id], token);
   }
-  assert.equal(nextLayerStateToken(), '9');
+  assert.equal(nextLayerStateToken(), '01');
   assert.equal(
     nextLayerStateToken({
       ...LAYER_STATE_TOKEN_RESERVATIONS,
-      bravo: '9',
+      alpha: '00',
     }),
-    '00',
+    '01',
   );
   const digitsExhausted = {
     ...LAYER_STATE_TOKEN_RESERVATIONS,
     ...Object.fromEntries([...'9'].map((digit) => [`prior-${digit}`, digit])),
   };
-  assert.equal(nextLayerStateToken(digitsExhausted), '00');
+  assert.equal(nextLayerStateToken(digitsExhausted), '01');
   assert.equal(
     nextLayerStateToken({ ...digitsExhausted, retired: '00', used: '01' }),
     '02',
@@ -304,8 +304,8 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   assert.equal(
     validateLayerStateAllocations(LAYER_STATE_TOKEN_RESERVATIONS, {
       ...LAYER_STATE_TOKEN_RESERVATIONS,
-      future: '9',
-      next: '00',
+      future: '01',
+      next: '02',
     }),
     true,
   );
@@ -313,16 +313,17 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
     () =>
       validateLayerStateAllocations(LAYER_STATE_TOKEN_RESERVATIONS, {
         ...LAYER_STATE_TOKEN_RESERVATIONS,
-        future: '00',
+        future: '02',
       }),
-    /next free token 9/,
+    /next free token 01/,
   );
-  const beforeLastDigit = { ...digitsExhausted };
-  delete beforeLastDigit['prior-9'];
+  const beforeLastDigit = Object.fromEntries(
+    Object.entries(digitsExhausted).filter(([, token]) => token !== '9'),
+  );
   assert.equal(
     validateLayerStateAllocations(beforeLastDigit, {
       ...beforeLastDigit,
-      futurePair: '00',
+      futurePair: '01',
       futureDigit: '9',
     }),
     true,
@@ -330,8 +331,8 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
   assert.equal(
     validateLayerStateAllocations(digitsExhausted, {
       ...digitsExhausted,
-      pairB: '01',
-      pairA: '00',
+      pairB: '02',
+      pairA: '01',
     }),
     true,
   );
@@ -341,7 +342,7 @@ test('production registry is exact, canonical, and rejects incomplete contracts'
         { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: '9' },
         { ...LAYER_STATE_TOKEN_RESERVATIONS, merged: '9', competing: '9' },
       ),
-    /next free token 00/,
+    /next free token 01/,
   );
   assert.throws(
     () => validateLayerStateAllocations({ future: '00' }, { future: '01' }),
@@ -497,7 +498,7 @@ test('unknown enabled-layer tokens reject the payload instead of becoming an emp
 });
 
 test('malformed enabled-layer lists reject the entire payload', () => {
-  for (const value of ['.c', 'c.', 'c..e', 'c.c', '00', 'c.00']) {
+  for (const value of ['.c', 'c.', 'c..e', 'c.c', '01', 'c.01']) {
     assert.equal(
       decodeLayerStateParams(new URLSearchParams(`v=2&l=${value}`)),
       null,
@@ -2999,4 +3000,31 @@ test('GOES-19 satellite product serializes without changing existing product cod
   const encoded = new URLSearchParams(encode(state));
   const restored = decodeLayerStateParams(encoded);
   assert.equal(restored.options['weather-satellite'].product, 'clouds-goes19');
+});
+
+test('IMERG selection shares the published radar token; daily location/dates stay transient', () => {
+  const state = normalizeLayerState({
+    enabledLayerIds: ['weather-radar'],
+    options: {
+      'weather-radar': {
+        product: 'precipitation-imerg',
+        opacity: 'light',
+        accumulation: true,
+        accumulationStep: -1,
+        lat: -2,
+        lon: -79,
+      },
+    },
+  });
+  const encoded = new URLSearchParams(encode(state));
+  const restored = decodeLayerStateParams(encoded);
+  assert.deepEqual(restored.options['weather-radar'], {
+    product: 'precipitation-imerg',
+    opacity: 'light',
+  });
+  assert.equal(
+    LAYER_STATE_REGISTRY.find((e) => e.id === 'weather-radar').token,
+    'v',
+  );
+  assert.ok(!encode(state).includes('2026-'));
 });

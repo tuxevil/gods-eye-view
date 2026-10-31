@@ -180,7 +180,7 @@ test('provider failure retains plants, marks stale, and escapes HTML in descript
   layer.destroy();
 });
 
-test('selection overlay cards display Mazar thresholds and clean up on disable/destroy', async () => {
+test('verified site selection preserves role/provenance without copying plant metrics and cleans up', async () => {
   const snap = sampleSnapshot();
   let datasource;
   let clickAction;
@@ -199,7 +199,7 @@ test('selection overlay cards display Mazar thresholds and clean up on disable/d
     camera: {},
     scene: {
       pick() {
-        return { id: { id: 'ecuador-energy:mazar' } };
+        return { id: { id: 'ecuador-energy:sopladora-access-portal' } };
       },
     },
   };
@@ -244,17 +244,31 @@ test('selection overlay cards display Mazar thresholds and clean up on disable/d
   layer.enable();
   await layer.update();
   await layer.update();
-  assert.equal(datasource.entities.values.length, 8);
+  assert.equal(datasource.entities.values.length, 7);
 
   clickAction({ position: { x: 10, y: 20 } });
   const selectedCards = entries.get('ecuador-energy-selection');
   assert.equal(selectedCards.length, 1);
   assert.ok(
-    selectedCards[0].details.some((line) =>
-      line.includes('Mazar 2115 m margin'),
-    ),
+    selectedCards[0].details.some((line) => line.includes('access-portal')),
   );
 
+  assert.ok(
+    selectedCards[0].details.some((line) =>
+      line.includes('No observation assigned'),
+    ),
+  );
+  assert.ok(!selectedCards[0].details.some((line) => line.includes('MWh')));
+  assert.match(
+    plantDescription(snap.plants.find((p) => p.id === 'mazar')),
+    /Mazar thresholds/,
+  );
+  assert.equal(
+    layer.getLoadedPointSnapshot().records.filter((r) => r.coordinatesVerified)
+      .length,
+    2,
+  );
+  assert.equal(datasource.entities.getById('ecuador-energy:mazar'), undefined);
   layer.disable();
   assert.equal(destroyed, 1);
   assert.equal(owners.size, 0);

@@ -2,8 +2,10 @@ import * as Cesium from 'cesium';
 import * as stationPicking from '../data/pickRegistry.js';
 import { isPointerFree } from '../data/inputOwnership.js';
 import { overlayHost } from './layers/overlayHost.js';
+import { createWatershedLayer } from '../layers/watersheds/index.js';
 import { createEcuadorEnergyLayer } from '../layers/ecuadorEnergy/index.js';
 import { createSngrEventsLayer } from '../layers/sngrEvents/index.js';
+import { createIgepnGeophysicsLayer } from '../layers/igepnGeophysics/index.js';
 import { createWeatherStationsLayer } from '../layers/weatherStations/index.js';
 import { resolveCatalogSources } from './sourceComposition.js';
 import { createWeatherClock } from '../layers/weather/clock.js';
@@ -112,6 +114,28 @@ export function createApplicationCatalog({
     const satellites = createApplicationSatellites({
       source: sources.satellites,
     });
+    const weatherStations = createWeatherStationsLayer({
+      source: sources['weather-stations'],
+      overlayHost,
+      picking: stationPicking,
+      pointer: { isPointerFree },
+      handlerFactory: (viewer) =>
+        new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
+    });
+    let watershedLayer;
+    const ecuadorEnergy = createEcuadorEnergyLayer({
+      getSiteMembership: (site) =>
+        watershedLayer?.getPointMembership(site) || {
+          state: 'not-loaded',
+          units: [],
+        },
+      source: sources['ecuador-energy'],
+      overlayHost,
+      picking: stationPicking,
+      pointer: { isPointerFree },
+      handlerFactory: (viewer) =>
+        new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
+    });
     const catalog = createLayerCatalog(
       [
         createBhoteKoshiEventLayer(),
@@ -128,24 +152,42 @@ export function createApplicationCatalog({
         }),
         createApplicationEarthquakes({ source: sources.earthquakes }),
         createApplicationAirQuality({ source: sources['air-quality'] }),
-        createWeatherStationsLayer({
-          source: sources['weather-stations'],
+        weatherStations,
+        ecuadorEnergy,
+        (watershedLayer = createWatershedLayer({
+          source: sources.watersheds,
           overlayHost,
           picking: stationPicking,
           pointer: { isPointerFree },
           handlerFactory: (viewer) =>
             new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
-        }),
-        createEcuadorEnergyLayer({
-          source: sources['ecuador-energy'],
-          overlayHost,
-          picking: stationPicking,
-          pointer: { isPointerFree },
-          handlerFactory: (viewer) =>
-            new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
-        }),
+          getPointGroups: () => {
+            const energy = ecuadorEnergy.getLoadedPointSnapshot();
+            return [
+              weatherStations.getLoadedPointSnapshot(),
+              {
+                ...energy,
+                records: energy.records.map((record) => ({
+                  ...record,
+                  // Catalog context is separate from polygon containment.
+                  documentedContext: record.basin?.startsWith('Paute Integral')
+                    ? record.basin
+                    : null,
+                })),
+              },
+            ];
+          },
+        })),
         createSngrEventsLayer({
           source: sources['sngr-events'],
+          overlayHost,
+          picking: stationPicking,
+          pointer: { isPointerFree },
+          handlerFactory: (viewer) =>
+            new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas),
+        }),
+        createIgepnGeophysicsLayer({
+          source: sources['igepn-geophysics'],
           overlayHost,
           picking: stationPicking,
           pointer: { isPointerFree },

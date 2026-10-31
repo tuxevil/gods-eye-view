@@ -809,6 +809,47 @@ test('time fields filter by ISO and derive ageHours; the feed window is exposed'
   assert.equal(age.coverage.layersQueried[0].window, 'last 24 h');
 });
 
+test('IGEPN analyst layer exposes stable event time and distinguishes volcano catalog records', async () => {
+  const now = Date.parse('2026-10-30T18:00:00Z');
+  const engine = createAnalystEngine({
+    now: () => now,
+    getRecords: () => [
+      {
+        id: 'tectonic-q1',
+        recordType: 'tectonic_quake',
+        lat: -0.2,
+        lon: -78.5,
+        magnitude: 3.1,
+        depthKm: 12,
+        observedMs: now - 2 * 3_600_000,
+      },
+      {
+        id: 'volcano-cotopaxi',
+        recordType: 'volcano',
+        lat: -0.7,
+        lon: -78.4,
+        events30d: 3,
+        events90d: 5,
+      },
+    ],
+    getLayerSnapshot: () => ({
+      id: 'igepn-geophysics',
+      enabled: true,
+      feedState: 'nominal',
+    }),
+    getViewContext: () => ({ lat: 0, lon: -78.5, viewRadiusKm: 100 }),
+  });
+  const result = await engine.query({
+    layers: ['igepn-geophysics'],
+    scope: { kind: 'anywhere' },
+    filters: [{ field: 'recordType', op: 'eq', value: 'tectonic_quake' }],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 1);
+  assert.equal(result.items[0].recordType, 'tectonic_quake');
+  assert.equal(result.items[0].ageHours, 2);
+});
+
 test('follow-up provenance stays attached to old rows after a feed recovers', async () => {
   let state = 'stale';
   const engine = createAnalystEngine({

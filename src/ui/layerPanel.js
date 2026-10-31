@@ -76,6 +76,7 @@ const PANEL_GROUPS = [
       'gnss-integrity',
       's2-ghostmaps',
       'sngr-events',
+      'igepn-geophysics',
     ],
   },
   {
@@ -83,6 +84,7 @@ const PANEL_GROUPS = [
     ids: [
       'air-quality',
       'weather-stations',
+      'watersheds',
       'wind',
       'weather-radar',
       'weather-satellite',

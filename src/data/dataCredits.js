@@ -100,6 +100,14 @@ export const NYC_DOT_DISCLAIMER =
 
 export const DATA_CREDITS = [
   {
+    key: 'basinatlas-watersheds',
+    html: 'Watershed context: <a href="https://www.hydrosheds.org/hydroatlas" target="_blank" rel="noopener">BasinATLAS v1.0 / HydroSHEDS</a>, Linke et al. (2019), <a href="https://doi.org/10.1038/s41597-019-0300-6" target="_blank" rel="noopener">Scientific Data 6:283</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Seven level-8 units selected near Paute; source coordinates retained, attributes subset and label anchors added. Geographic context only; not named reservoir catchments.',
+  },
+  {
+    key: 'igepn-ecuador-geophysics',
+    html: 'Ecuador tectonic earthquakes, volcanic seismicity and volcano-edifice catalogue: <a href="https://www.igepn.edu.ec/" target="_blank" rel="noopener">Instituto Geofísico de la Escuela Politécnica Nacional (IGEPN)</a> ArcGIS services. Instrumental seismic signals and edifice catalogue are distinct data; signals are not eruption forecasts or alert levels.',
+  },
+  {
     key: 'sngr-ecuador-events',
     html: 'Ecuador adverse event reports: <a href="https://sgrportal.gestionderiesgos.gob.ec/" target="_blank" rel="noopener">Secretaría Nacional de Gestión de Riesgos (SNGR)</a> REDM/EVIN field incident records. Dated field reports with publication lag; not a real-time alert or static susceptibility map.',
   },
@@ -422,6 +430,10 @@ export const DATA_CREDITS = [
       'Terrain (keyless globe stacks): ' +
       '<a href="https://terrain.reearth.land" target="_blank" rel="noopener">Re:Earth Terrain</a> / ' +
       'Mapterhorn (CC BY 4.0) / EGM2008 (NGA)',
+  },
+  {
+    key: 'weather-imerg',
+    html: 'Satellite precipitation estimates: NASA GPM / PPS; <a href="https://nasa-gibs.github.io/gibs-api-docs/" target="_blank" rel="noopener">NASA GIBS (ESDIS)</a> imagery; daily IMERG through <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener">NASA POWER</a>.',
   },
   {
     key: 'weather-noaa',

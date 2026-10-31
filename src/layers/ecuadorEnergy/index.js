@@ -1,6 +1,7 @@
 import * as Cesium from 'cesium';
 import { t } from '../../i18n/index.js';
 import { plantMarkerColor, plantStale } from './model.js';
+import { geographicSiteRecords, plantGeography } from './sites.js';
 
 const escapeHtml = (value) =>
   String(value ?? 'Unavailable').replace(
@@ -34,11 +35,18 @@ export function plantDescription(
     ['Basin / cascade', plant.basin],
     ['Role', plant.role],
     [
+      'Location',
+      plant.coordinatesVerified === true
+        ? 'Verified'
+        : 'Unverified / unknown; excluded from watershed containment',
+    ],
+    ['Geographic assets', (plant.geographicSiteIds || []).join(' · ')],
+    [
       'Nominal installed capacity',
       `${formatMetric(plant.installedMW, 'MW', 0)} (design capacity, not guaranteed available power)`,
     ],
     [
-      'Reservoir elevation (CELEC)',
+      plant.elevationReferent || 'Reservoir elevation (CELEC)',
       plant.cotaMsnm !== null
         ? `${formatMetric(plant.cotaMsnm, 'm s.n.m.', 2)} (${plant.cotaObservedAt || 'time unavailable'})`
         : 'Unavailable',
@@ -127,7 +135,7 @@ function buildSelectionDetails(plant, nationalSummary, isStale) {
   const lines = [
     `${plant.operator} · ${plant.observedAt || 'Observation time unavailable'}`,
     `${isStale ? 'STALE' : 'Recent observation'} · Installed ${formatMetric(plant.installedMW, 'MW', 0)} (nominal design, not available MW)`,
-    `Elevation ${formatMetric(plant.cotaMsnm, 'm s.n.m.', 2)} · Inflow ${formatMetric(plant.inflowM3s ?? plant.flowM3s, 'm³/s', 2)} · Units ${plant.unitsOnline ?? 'Unavailable'}`,
+    `${plant.elevationReferent || 'Elevation'}: ${formatMetric(plant.cotaMsnm, 'm s.n.m.', 2)} · Inflow ${formatMetric(plant.inflowM3s ?? plant.flowM3s, 'm³/s', 2)} · Units ${plant.unitsOnline ?? 'Unavailable'}`,
     `Daily cumulative energy ${formatMetric(plant.dailyCumulativeMWh, 'MWh', 1)} (${plant.cenaceSourceDate || 'date unavailable'}, cumulative MWh ≠ MW)`,
     plant.estimatedIntervalAvgMW !== null
       ? `Estimated interval average MW: ${formatMetric(plant.estimatedIntervalAvgMW, 'MW', 1)} (ΔMWh / Δh over ${plant.intervalHours} h)`
@@ -150,10 +158,10 @@ function buildSelectionDetails(plant, nationalSummary, isStale) {
 }
 
 function formatOverlayLabel(plant) {
-  if (plant.cotaMsnm !== null) {
+  if (Number.isFinite(plant.cotaMsnm)) {
     return `${plant.name} ${Math.round(plant.cotaMsnm * 10) / 10} m`;
   }
-  if (plant.dailyCumulativeMWh !== null) {
+  if (Number.isFinite(plant.dailyCumulativeMWh)) {
     return `${plant.name} ${Math.round(plant.dailyCumulativeMWh)} MWh`;
   }
   return plant.name;
@@ -166,6 +174,7 @@ export function createEcuadorEnergyLayer({
   picking,
   pointer,
   handlerFactory,
+  getSiteMembership = () => ({ state: 'not-loaded', units: [] }),
 } = {}) {
   if (typeof source?.getSnapshot !== 'function') {
     throw new TypeError('Ecuador energy snapshot source required');
@@ -175,6 +184,28 @@ export function createEcuadorEnergyLayer({
   let enabled = false;
   let request = null;
   let plants = [];
+  let sites = [];
+  const isMapped = (p) => Number.isFinite(p.lon) && Number.isFinite(p.lat);
+  const mappedRecords = () => [...plants, ...sites].filter(isMapped);
+  const siteDetails = (site) => {
+    const membership = getSiteMembership(site);
+    return [
+      `${site.role} · ${site.plantId} · ${site.id}`,
+      site.relationship,
+      `WGS84 ${site.lat}, ${site.lon} · ${site.coordinatesVerified ? 'Verified' : 'Unverified'}`,
+      site.locationPrecision,
+      `${site.location.sourceCrs} E ${site.location.sourceCoordinates[0]} / N ${site.location.sourceCoordinates[1]}`,
+      `${site.provenance.section} · reviewed ${site.provenance.reviewedAt}`,
+      site.provenance.url,
+      `BasinATLAS level 8 containment: ${membership.state} · ${membership.units.map((u) => u.name).join(' · ') || 'No loaded containing unit'}`,
+      'Containment only; hydraulic relationship is documented separately',
+      'No observation assigned to this physical site',
+    ].flatMap((line) => line.match(/.{1,64}/gu) || []);
+  };
+  const description = (p, isStale) =>
+    p.recordType === 'geographic-site'
+      ? `<h3>${escapeHtml(p.name)}</h3><p>${siteDetails(p).map(escapeHtml).join('<br>')}</p>`
+      : plantDescription(p, nationalSummary, isStale);
   let nationalSummary = null;
   let lastUpdate = null;
   let error = null;
@@ -184,8 +215,10 @@ export function createEcuadorEnergyLayer({
   let selectedId = null;
 
   const showSelected = () => {
-    const selected = plants.find((p) => p.id === selectedId);
-    const cardTitle = selected ? `${selected.name} · ${selected.basin}` : '';
+    const selected = mappedRecords().find((p) => p.id === selectedId);
+    const cardTitle = selected
+      ? `${selected.name} · ${selected.basin || selected.role}`
+      : '';
     overlayHost?.setEntries(
       'ecuador-energy-selection',
       selected
@@ -199,12 +232,18 @@ export function createEcuadorEnergyLayer({
               selected: true,
               interactive: false,
               title: cardTitle,
-              details: buildSelectionDetails(
-                selected,
-                nationalSummary,
-                stale || plantStale(selected),
-              ),
-              accent: plantMarkerColor(selected, stale),
+              details:
+                selected.recordType === 'geographic-site'
+                  ? siteDetails(selected)
+                  : buildSelectionDetails(
+                      selected,
+                      nationalSummary,
+                      stale || plantStale(selected),
+                    ),
+              accent:
+                selected.recordType === 'geographic-site'
+                  ? '#a78bfa'
+                  : plantMarkerColor(selected, stale),
               priority: Number.MAX_SAFE_INTEGER,
               gapPx: 18,
               verticalOnly: true,
@@ -275,7 +314,11 @@ export function createEcuadorEnergyLayer({
         if (current.signal.aborted || request !== current || !enabled) {
           return false;
         }
-        plants = result.plants || [];
+        plants = (result.plants || []).map((p) => ({
+          ...p,
+          ...plantGeography(p.id),
+        }));
+        sites = geographicSiteRecords(plants);
         nationalSummary = result.nationalSummary || null;
         stale = Boolean(result.stale);
         lastUpdate = result.fetchedAt ?? null;
@@ -287,17 +330,19 @@ export function createEcuadorEnergyLayer({
               : null;
 
         data.entities.removeAll();
-        for (const p of plants) {
+        for (const p of mappedRecords()) {
           const itemStale = stale || plantStale(p);
           data.entities.add({
             id: `ecuador-energy:${p.id}`,
             name: formatOverlayLabel(p),
             position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat),
-            description: plantDescription(p, nationalSummary, itemStale),
+            description: description(p, itemStale),
             point: {
               pixelSize: 13,
               color: Cesium.Color.fromCssColorString(
-                plantMarkerColor(p, itemStale),
+                p.recordType === 'geographic-site'
+                  ? '#a78bfa'
+                  : plantMarkerColor(p, itemStale),
               ),
               outlineColor: Cesium.Color.WHITE,
               outlineWidth: 2,
@@ -314,14 +359,17 @@ export function createEcuadorEnergyLayer({
 
         overlayHost?.setEntries(
           'ecuador-energy',
-          plants.map((p) => {
+          mappedRecords().map((p) => {
             const labelTitle = formatOverlayLabel(p);
             return {
               id: p.id,
               position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat),
               variant: 'label',
               title: labelTitle,
-              accent: plantMarkerColor(p, stale || plantStale(p)),
+              accent:
+                p.recordType === 'geographic-site'
+                  ? '#a78bfa'
+                  : plantMarkerColor(p, stale || plantStale(p)),
               priority: 2,
               collisionGroup: 'ambient-label',
               paintLane: 'ambient-label',
@@ -344,10 +392,10 @@ export function createEcuadorEnergyLayer({
         if (current.signal.aborted || request !== current) return false;
         error = e.message;
         stale = true;
-        for (const p of plants) {
+        for (const p of mappedRecords()) {
           const entity = data.entities.getById(`ecuador-energy:${p.id}`);
           if (entity) {
-            entity.description = plantDescription(p, nationalSummary, true);
+            entity.description = description(p, true);
             entity.point.color = Cesium.Color.fromCssColorString('#94a3b8');
           }
         }
@@ -372,8 +420,7 @@ export function createEcuadorEnergyLayer({
         summary: {
           label: t('Ecuador hydro & grid'),
           coverage: 'CELEC SUR reservoirs · CENACE national SCADA',
-          detail:
-            'Elevation m s.n.m. · flow m³/s · daily cumulative MWh ≠ instantaneous MW',
+          detail: `Elevation m s.n.m. · flow m³/s · daily cumulative MWh ≠ instantaneous MW · ${sites.filter(isMapped).length} verified physical sites · ${sites.filter((s) => !isMapped(s)).length} site locations unknown`,
           status:
             error ||
             t('{count} hydro plants · {freshness}', {
@@ -400,11 +447,32 @@ export function createEcuadorEnergyLayer({
     setRowControlsListener(fn) {
       listener = fn;
     },
+    getLoadedPointSnapshot() {
+      return {
+        id: 'ecuador-energy',
+        state: !enabled
+          ? 'off'
+          : error
+            ? 'unavailable'
+            : !lastUpdate
+              ? 'not-loaded'
+              : 'loaded',
+        records: enabled
+          ? [...plants, ...sites].map((plant) => ({
+              ...plant,
+              coordinatesVerified: plant.coordinatesVerified === true,
+              locationRole: plant.locationRole,
+            }))
+          : [],
+      };
+    },
     getAnalystRecords(max = 32) {
       return enabled
-        ? plants
-            .slice(0, Math.max(0, Math.min(32, max)))
-            .map((p) => ({ ...p, stale: stale || plantStale(p) }))
+        ? plants.slice(0, Math.max(0, Math.min(32, max))).map((p) => ({
+            ...p,
+            geographicSites: sites.filter((s) => s.plantId === p.id),
+            stale: stale || plantStale(p),
+          }))
         : [];
     },
     getStats() {
@@ -413,6 +481,8 @@ export function createEcuadorEnergyLayer({
         .filter((ms) => typeof ms === 'number' && Number.isFinite(ms));
       return {
         count: plants.length,
+        mappedSiteCount: sites.filter(isMapped).length,
+        unlocatedSiteCount: sites.filter((s) => !isMapped(s)).length,
         lastUpdate,
         error,
         observedAt: observedTimes.length ? Math.max(...observedTimes) : null,
@@ -425,6 +495,7 @@ export function createEcuadorEnergyLayer({
       data = null;
       viewer = null;
       plants = [];
+      sites = [];
       nationalSummary = null;
       listener = null;
     },

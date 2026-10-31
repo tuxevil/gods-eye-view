@@ -281,6 +281,19 @@ export function createWeatherStationsLayer({
     setRowControlsListener(fn) {
       listener = fn;
     },
+    getLoadedPointSnapshot() {
+      return {
+        id: 'weather-stations',
+        state: !enabled
+          ? 'off'
+          : error
+            ? 'unavailable'
+            : !lastUpdate
+              ? 'not-loaded'
+              : 'loaded',
+        records: enabled ? readings : [],
+      };
+    },
     getAnalystRecords(max = 400) {
       return enabled
         ? readings

@@ -212,34 +212,36 @@ export function createSngrEventsService({
 
 export function sngrEventsProxy(options = {}) {
   const service = createSngrEventsService(options);
-  return {
-    name: 'sngr-events-proxy',
-    configureServer(server) {
-      server.middlewares.use('/api/sngr-events', async (req, res) => {
-        const write = (status, body) => {
-          res.writeHead(status, {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-          });
-          res.end(JSON.stringify(body));
-        };
-        if (req.method !== 'GET') {
-          write(405, { error: 'Method not allowed' });
+  const install = (server) => {
+    server.middlewares.use('/api/sngr-events', async (req, res) => {
+      const write = (status, body) => {
+        res.writeHead(status, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        });
+        res.end(JSON.stringify(body));
+      };
+      if (req.method !== 'GET') {
+        write(405, { error: 'Method not allowed' });
+        return;
+      }
+      const url = new URL(req.url || '/', 'http://localhost');
+      for (const key of url.searchParams.keys()) {
+        if (key !== '') {
+          write(400, { error: 'Unknown query parameter' });
           return;
         }
-        const url = new URL(req.url || '/', 'http://localhost');
-        for (const key of url.searchParams.keys()) {
-          if (key !== '') {
-            write(400, { error: 'Unknown query parameter' });
-            return;
-          }
-        }
-        try {
-          write(200, await service.getSnapshot());
-        } catch {
-          write(502, { error: 'SNGR adverse events unavailable' });
-        }
-      });
-    },
+      }
+      try {
+        write(200, await service.getSnapshot());
+      } catch {
+        write(502, { error: 'SNGR adverse events unavailable' });
+      }
+    });
+  };
+  return {
+    name: 'sngr-events-proxy',
+    configureServer: install,
+    configurePreviewServer: install,
   };
 }

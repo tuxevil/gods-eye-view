@@ -2816,10 +2816,18 @@
       "src/layers/weatherStations/source.js",
       "src/layers/ecuadorEnergy/index.js",
       "src/layers/ecuadorEnergy/model.js",
+      "src/layers/ecuadorEnergy/sites.js",
       "src/layers/ecuadorEnergy/source.js",
       "src/layers/sngrEvents/index.js",
       "src/layers/sngrEvents/model.js",
-      "src/layers/sngrEvents/source.js"
+      "src/layers/sngrEvents/source.js",
+      "src/layers/igepnGeophysics/index.js",
+      "src/layers/igepnGeophysics/model.js",
+      "src/layers/igepnGeophysics/source.js",
+      "src/layers/watersheds/index.js",
+      "src/layers/watersheds/source.js",
+      "src/layers/watersheds/model.js",
+      "src/layers/watersheds/geometry.js"
     ],
     "external": [
       "hls.js",
@@ -3409,10 +3417,18 @@
       "src/layers/weatherStations/source.js",
       "src/layers/ecuadorEnergy/index.js",
       "src/layers/ecuadorEnergy/model.js",
+      "src/layers/ecuadorEnergy/sites.js",
       "src/layers/ecuadorEnergy/source.js",
       "src/layers/sngrEvents/index.js",
       "src/layers/sngrEvents/model.js",
-      "src/layers/sngrEvents/source.js"
+      "src/layers/sngrEvents/source.js",
+      "src/layers/igepnGeophysics/index.js",
+      "src/layers/igepnGeophysics/model.js",
+      "src/layers/igepnGeophysics/source.js",
+      "src/layers/watersheds/index.js",
+      "src/layers/watersheds/source.js",
+      "src/layers/watersheds/model.js",
+      "src/layers/watersheds/geometry.js"
     ],
     "external": [
       "hls.js",

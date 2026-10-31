@@ -1,3 +1,5 @@
+import { plantGeography } from './sites.js';
+
 /**
  * Portable Ecuador energy contract: dated hydro plant catalog, CELEC SUR
  * reservoir/flow telemetry, and CENACE daily cumulative energy (MWh) and
@@ -49,10 +51,10 @@ export const ECUADOR_HYDRO_PLANTS = Object.freeze([
     cenaceName: 'Mazar',
     operator: 'CELEC EP Celec Sur',
     basin: 'Paute Integral (head reservoir, Azuay / Cañar)',
-    role: 'Head storage reservoir regulating the 1,757 MW Paute Integral cascade',
+    role: 'Generating plant supplied by the separate Mazar storage reservoir',
     installedMW: 170,
-    lat: -2.5969,
-    lon: -78.6231,
+    lat: null,
+    lon: null,
     celecMrids: Object.freeze({
       cotaMsnm: 30031,
       inflowM3s: 30538,
@@ -62,14 +64,14 @@ export const ECUADOR_HYDRO_PLANTS = Object.freeze([
   }),
   Object.freeze({
     id: 'paute-molino',
-    name: 'Paute-Molino (Amaluza)',
+    name: 'Paute-Molino',
     cenaceName: 'Paute',
     operator: 'CELEC EP Celec Sur',
     basin: 'Paute Integral (Amaluza reservoir, Azuay)',
-    role: 'Main generation stage downstream of Mazar',
+    role: 'Underground generating plant supplied by the separate Amaluza reservoir',
     installedMW: 1100,
-    lat: -2.5767,
-    lon: -78.5572,
+    lat: null,
+    lon: null,
     celecMrids: Object.freeze({
       cotaMsnm: 24019,
       flowM3s: 24811,
@@ -85,8 +87,8 @@ export const ECUADOR_HYDRO_PLANTS = Object.freeze([
     basin: 'Paute Integral (lower cascade, Azuay / Morona Santiago)',
     role: 'Lower cascade stage capturing Paute-Molino turbine discharge',
     installedMW: 487,
-    lat: -2.6006,
-    lon: -78.4739,
+    lat: null,
+    lon: null,
     celecMrids: Object.freeze({
       cotaMsnm: 90919,
       flowM3s: 90537,
@@ -765,6 +767,7 @@ export function buildEcuadorEnergySnapshot({
       installedMW: spec.installedMW,
       lat: spec.lat,
       lon: spec.lon,
+      ...plantGeography(spec.id),
       catalogReviewedAt: CATALOG_REVIEWED_AT,
       cotaMsnm: cotaRec?.value ?? null,
       cotaObservedAt: cotaRec?.observedAt ?? null,

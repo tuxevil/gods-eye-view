@@ -65,14 +65,20 @@ test('disabled layers do no work; repeat refresh replaces entities, disable abor
     },
   });
   layer.init(viewer());
+  assert.equal(layer.getLoadedPointSnapshot().state, 'off');
+  assert.deepEqual(layer.getLoadedPointSnapshot().records, []);
   assert.equal(await layer.update(), false);
   assert.equal(calls, 0);
   layer.enable();
   await layer.update();
   await layer.update();
   assert.equal(layer.getStats().count, 1);
+  assert.equal(layer.getLoadedPointSnapshot().state, 'loaded');
+  assert.equal(layer.getLoadedPointSnapshot().records.length, 1);
   assert.equal(layer.getAnalystRecords().length, 1);
   layer.disable();
+  assert.equal(layer.getLoadedPointSnapshot().state, 'off');
+  assert.deepEqual(layer.getLoadedPointSnapshot().records, []);
   assert.deepEqual(layer.getAnalystRecords(), []);
   await layer.update();
   assert.equal(calls, 2);

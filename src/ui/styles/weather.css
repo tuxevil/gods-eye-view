@@ -145,6 +145,7 @@
 }
 .rail-card-line {
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 .weather-card [data-line-id='status'] {
   height: 1.45em;
@@ -344,6 +345,22 @@ html:not([lang='en']) .rail-card-setting {
 }
 .rail-card-setting .rail-card-chips {
   margin-top: 0;
+}
+/* This source heading is longer than a compact setting label. Keep it out of
+   the shared label column so translated text cannot squeeze controls to zero. */
+.weather-card .rail-card-setting[data-block-id='accumulation'] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+.weather-card
+  .rail-card-setting[data-block-id='accumulation']
+  .rail-card-setting-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
 }
 .rail-card-setting-range-row {
   display: flex;

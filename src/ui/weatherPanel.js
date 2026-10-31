@@ -177,7 +177,7 @@ export function createWeatherPanel({
       if (OBSERVED.has(id)) {
         const shown = product?.shown ?? summary.shownTime;
         if (state.mode === 'history' && product?.selected === null) {
-          const gap = summary.maxGapMinutes || 30;
+          const gap = summary.maxGapMinutes ?? 30;
           const time = clockTime(state.target);
           detail =
             gap < 60

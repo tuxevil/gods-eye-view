@@ -35,6 +35,17 @@ const STOPS = [
   [70, '#ff00ff'],
   [80, '#05ede0'],
 ];
+// Representative ticks from NASA GIBS GPM_Precipitation_Rate v1.3 color map.
+const IMERG_STOPS = [
+  ['0.2', '#009424'],
+  ['1', '#c3e400'],
+  ['5', '#ff4730'],
+  ['20', '#9c0000'],
+  ['0.2', '#8febf1'],
+  ['1', '#4f73c4'],
+  ['5', '#5f2fe4'],
+  ['20', '#770792'],
+];
 const LIGHTNING_STOPS = [
   ['0.1', '#FFFFCC'],
   ['1', '#FFA400'],
@@ -68,6 +79,12 @@ export function createWeatherLayer({
   const lightning = id === 'weather-lightning';
   const satellite = !radar && !lightning;
   let product = radar ? 'radar' : lightning ? 'lightning' : 'clouds-regional';
+  const precipitation = () => product === 'precipitation-imerg';
+  let daily = null,
+    dailyRequest = null,
+    dailyIndex = -1,
+    dailyError = null,
+    dailyLoading = false;
   let opacity = 'strong';
   let infrared = 100;
   let viewer = null,
@@ -93,15 +110,17 @@ export function createWeatherLayer({
   let frameRequest = null;
   let noFrame = false;
   const maxGap = () =>
-    radar
-      ? RADAR_MAX_GAP_MS
-      : lightning
-        ? LIGHTNING_MAX_GAP_MS
-        : product === 'clouds-goes19'
-          ? 40 * 60_000
-          : product === 'clouds'
-            ? GLOBAL_INFRARED_MAX_GAP_MS
-            : REGIONAL_INFRARED_MAX_GAP_MS;
+    precipitation()
+      ? 0
+      : radar
+        ? RADAR_MAX_GAP_MS
+        : lightning
+          ? LIGHTNING_MAX_GAP_MS
+          : product === 'clouds-goes19'
+            ? 40 * 60_000
+            : product === 'clouds'
+              ? GLOBAL_INFRARED_MAX_GAP_MS
+              : REGIONAL_INFRARED_MAX_GAP_MS;
   const isLatest = () =>
     clock ? clock.getState().mode === 'latest' : followLatest;
   const getHost = () =>
@@ -115,13 +134,15 @@ export function createWeatherLayer({
   const observationDelayed = () =>
     manifest?.latest &&
     Date.now() - Date.parse(manifest.latest) >
-      (product === 'clouds'
-        ? 240
-        : product === 'clouds-goes19'
-          ? 40
-          : lightning
-            ? 45
-            : 20) *
+      (precipitation()
+        ? 480
+        : product === 'clouds'
+          ? 240
+          : product === 'clouds-goes19'
+            ? 40
+            : lightning
+              ? 45
+              : 20) *
         60_000;
   const stop = () => {
     if (clock) return;
@@ -277,6 +298,74 @@ export function createWeatherLayer({
       }
     }
   }
+  function mapPoint() {
+    const canvas = viewer?.scene?.canvas;
+    const point =
+      canvas &&
+      viewer.camera.pickEllipsoid?.(
+        new cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2),
+        viewer.scene.globe.ellipsoid,
+      );
+    const position = point
+      ? cesium.Cartographic.fromCartesian(point, viewer.scene.globe.ellipsoid)
+      : null;
+    return position
+      ? {
+          lat: cesium.Math.toDegrees(position.latitude),
+          lon: cesium.Math.toDegrees(position.longitude),
+        }
+      : null;
+  }
+  async function sampleAccumulation() {
+    if (
+      !enabled ||
+      !precipitation() ||
+      typeof feed.getAccumulation !== 'function'
+    )
+      return;
+    const point = mapPoint();
+    if (
+      !point ||
+      point.lat < -6 ||
+      point.lat > 2 ||
+      point.lon < -93 ||
+      point.lon > -74
+    ) {
+      dailyError = msg('Map center outside coverage');
+      notify();
+      return;
+    }
+    dailyRequest?.abort();
+    const controller = new AbortController();
+    dailyRequest = controller;
+    dailyLoading = true;
+    dailyError = null;
+    notify();
+    try {
+      const value = await feed.getAccumulation({
+        ...point,
+        signal: controller.signal,
+      });
+      if (
+        !enabled ||
+        !precipitation() ||
+        controller.signal.aborted ||
+        dailyRequest !== controller
+      )
+        return;
+      daily = value;
+      dailyIndex = value.days.length - 1;
+    } catch (cause) {
+      if (!controller.signal.aborted && dailyRequest === controller)
+        dailyError = cause?.message || msg('Weather unavailable');
+    } finally {
+      if (dailyRequest === controller) {
+        dailyRequest = null;
+        dailyLoading = false;
+        notify();
+      }
+    }
+  }
   const layer = {
     id,
     name: radar
@@ -286,7 +375,7 @@ export function createWeatherLayer({
         : 'Satellite clouds',
     icon: radar ? '◉' : lightning ? 'ϟ' : '☁',
     get source() {
-      return `${manifest?.source ?? (product === 'clouds-goes19' ? 'NOAA GOES-19 · UW–Madison SSEC RealEarth' : 'NOAA nowCOAST')} · OBSERVED`;
+      return `${manifest?.source ?? (precipitation() ? 'NASA GIBS · GPM IMERG' : product === 'clouds-goes19' ? 'NOAA GOES-19 · UW–Madison SSEC RealEarth' : 'NOAA nowCOAST')} · ${precipitation() ? 'SATELLITE ESTIMATE' : 'OBSERVED'}`;
     },
     updateInterval: lightning ? 600_000 : 120_000,
     init(nextViewer) {
@@ -332,6 +421,12 @@ export function createWeatherLayer({
     },
     disable() {
       enabled = false;
+      dailyRequest?.abort();
+      dailyRequest = null;
+      daily = null;
+      dailyIndex = -1;
+      dailyLoading = false;
+      dailyError = null;
       removeCamera?.();
       removeCamera = null;
       unregisterClock?.();
@@ -446,13 +541,21 @@ export function createWeatherLayer({
         rendering?.setAlpha(opacity === 'light' ? 0.4 : satellite ? 0.7 : 0.8);
       }
       if (
-        satellite &&
-        ['clouds', 'clouds-regional', 'clouds-goes19'].includes(
-          params.product,
-        ) &&
+        ((satellite &&
+          ['clouds', 'clouds-regional', 'clouds-goes19'].includes(
+            params.product,
+          )) ||
+          (radar &&
+            ['radar', 'precipitation-imerg'].includes(params.product))) &&
         params.product !== product
       ) {
         product = params.product;
+        dailyRequest?.abort();
+        dailyRequest = null;
+        daily = null;
+        dailyIndex = -1;
+        dailyLoading = false;
+        dailyError = null;
         ++generation;
         frameRequest?.abort();
         frameRequest = null;
@@ -468,6 +571,19 @@ export function createWeatherLayer({
         if (clock) void clock.refresh();
         if (enabled) void layer.update(viewer);
       }
+      if (params.accumulation === true) void sampleAccumulation();
+      if (daily && [-1, 1].includes(params.accumulationStep))
+        dailyIndex = Math.max(
+          0,
+          Math.min(daily.days.length - 1, dailyIndex + params.accumulationStep),
+        );
+      if (daily && params.accumulationAvailable === true)
+        dailyIndex = Math.max(
+          0,
+          daily.days.findLastIndex((d) => d.accumulationMm !== null),
+        );
+      if (daily && params.accumulationLatest === true)
+        dailyIndex = daily.days.length - 1;
       if (infraredChanged && enabled && manifest) {
         clearTimeout(timer);
         timer = null;
@@ -531,7 +647,7 @@ export function createWeatherLayer({
     },
     getParams() {
       return radar
-        ? { opacity }
+        ? { opacity, ...(precipitation() ? { product } : {}) }
         : satellite
           ? { product, opacity, infrared }
           : { product, opacity };
@@ -618,15 +734,17 @@ export function createWeatherLayer({
       if (relation === 'synced') detail = t('{detail} · synced', { detail });
       else if (relation === 'nearest')
         detail = t('{detail} · nearest', { detail });
-      const infoHeading = radar
-        ? t('RADAR REFLECTIVITY · dBZ')
-        : lightning
-          ? t('LIGHTNING DENSITY · 15 min accumulation')
-          : product === 'clouds'
-            ? t('GLOBAL INFRARED · hourly')
-            : product === 'clouds-goes19'
-              ? t('GOES-19 INFRARED · ~10 min')
-              : t('GOES INFRARED · ~5 min');
+      const infoHeading = precipitation()
+        ? t('SATELLITE ESTIMATE · IMERG · mm/h')
+        : radar
+          ? t('RADAR REFLECTIVITY · dBZ')
+          : lightning
+            ? t('LIGHTNING DENSITY · 15 min accumulation')
+            : product === 'clouds'
+              ? t('GLOBAL INFRARED · hourly')
+              : product === 'clouds-goes19'
+                ? t('GOES-19 INFRARED · ~10 min')
+                : t('GOES INFRARED · ~5 min');
       const infoTime = time
         ? `${t('{state}: {time}', {
             state: followLatest ? t('Latest observation') : t('History'),
@@ -646,15 +764,17 @@ export function createWeatherLayer({
         : [t('Observation: unavailable'), loading ? t('loading') : '']
             .filter(Boolean)
             .join(' · ');
-      const infoCoverage = radar
-        ? t('Contiguous US · gaps ≠ no rain')
-        : lightning
-          ? `${t('Americas + Pacific · not individual strikes')}\n${t('Color: strikes/km²/min ×10³')}`
-          : product === 'clouds'
-            ? t('60°S–60°N · typically 2–3 h delayed')
-            : product === 'clouds-goes19'
-              ? t('Ecuador + Galápagos · infrared, not rain')
-              : t('North America · infrared imagery');
+      const infoCoverage = precipitation()
+        ? t('30-minute mean rate · ~5 h delayed · gaps are unknown')
+        : radar
+          ? t('Contiguous US · gaps ≠ no rain')
+          : lightning
+            ? `${t('Americas + Pacific · not individual strikes')}\n${t('Color: strikes/km²/min ×10³')}`
+            : product === 'clouds'
+              ? t('60°S–60°N · typically 2–3 h delayed')
+              : product === 'clouds-goes19'
+                ? t('Ecuador + Galápagos · infrared, not rain')
+                : t('North America · infrared imagery');
       const infoMotion = motion?.matches
         ? clock
           ? t('Reduced motion · history playback unavailable')
@@ -663,20 +783,24 @@ export function createWeatherLayer({
       const controls = {
         readout: true,
         summary: {
-          label: radar
-            ? t('Rain radar · US')
-            : lightning
-              ? t('Lightning density · 15 min')
-              : t('Satellite clouds'),
-          coverage: radar
-            ? 'CONUS'
-            : lightning
-              ? t('Americas + Pacific')
-              : product === 'clouds'
-                ? t('Global · 60°S–60°N')
-                : product === 'clouds-goes19'
-                  ? t('Ecuador + Galápagos')
-                  : t('North America'),
+          label: precipitation()
+            ? t('SATELLITE ESTIMATE · IMERG · mm/h')
+            : radar
+              ? t('Rain radar · US')
+              : lightning
+                ? t('Lightning density · 15 min')
+                : t('Satellite clouds'),
+          coverage: precipitation()
+            ? t('Ecuador + Galápagos')
+            : radar
+              ? 'CONUS'
+              : lightning
+                ? t('Americas + Pacific')
+                : product === 'clouds'
+                  ? t('Global · 60°S–60°N')
+                  : product === 'clouds-goes19'
+                    ? t('Ecuador + Galápagos')
+                    : t('North America'),
           shownTime: time,
           maxGapMinutes: maxGap() / 60_000,
           detail,
@@ -711,9 +835,26 @@ export function createWeatherLayer({
                 ],
               }
             : {}),
-          units: radar ? 'dBZ' : lightning ? t('strikes/km²/min ×10³') : '',
+          units: precipitation()
+            ? 'mm/h'
+            : radar
+              ? 'dBZ'
+              : lightning
+                ? t('strikes/km²/min ×10³')
+                : '',
         },
         chips: [
+          ...(radar
+            ? [
+                ['radar', t('Rain radar · US')],
+                ['precipitation-imerg', t('Ecuador · IMERG')],
+              ].map(([value, label]) => ({
+                id: value,
+                label,
+                active: product === value,
+                params: { product: value },
+              }))
+            : []),
           ...(satellite
             ? [
                 ['clouds-regional', t('N. America')],
@@ -765,17 +906,24 @@ export function createWeatherLayer({
           })),
           {
             id: 'coverage',
-            label: radar
-              ? t('View US radar')
-              : lightning
-                ? t('View Americas & Pacific')
-                : t('View coverage'),
+            label: precipitation()
+              ? t('View coverage')
+              : radar
+                ? t('View US radar')
+                : lightning
+                  ? t('View Americas & Pacific')
+                  : t('View coverage'),
             disabled: !manifest || !runNavigation,
             params: { focus: true },
           },
         ],
-        legend:
-          radar || lightning
+        legend: precipitation()
+          ? IMERG_STOPS.map(([label, color], i) => ({
+              label: `${i < 4 ? t('Rain') : t('Snow')} ${label}`,
+              color,
+              blurb: `${label} mm/h`,
+            }))
+          : radar || lightning
             ? (lightning ? LIGHTNING_STOPS : STOPS).map(([label, color]) => ({
                 label: String(label),
                 color,
@@ -791,8 +939,11 @@ export function createWeatherLayer({
         info: hostHidden
           ? shownHost
           : `${infoHeading}${product === 'clouds-goes19' ? '\nNOAA GOES-19 · UW–Madison SSEC RealEarth' : ''}\n${infoTime}${missing ? `\n${missing}` : ''}${manifest?.stale ? `\n${manifest.reason === 'Source observations delayed' ? t('Source observations delayed') : t('STALE · cached source metadata')}` : ''}${shownProblem ? `\n${shownProblem}` : ''}\n${infoCoverage}${outside ? `\n${t('Map center is outside source coverage')}` : ''}${infoMotion ? `\n${infoMotion}` : ''}`,
-        infoTitle:
-          product === 'clouds-goes19'
+        infoTitle: precipitation()
+          ? t(
+              'Satellite estimate; not ground measurement, radar or confirmed flooding. Terrain and coastal biases; transparent pixels are not proof of dry conditions.',
+            )
+          : product === 'clouds-goes19'
             ? t('GOES-19 Band 13 infrared; 10-minute scans, not rain')
             : lightning
               ? t(
@@ -806,7 +957,153 @@ export function createWeatherLayer({
                     'GOES-19/18 longwave infrared Band 14 regional; NESDIS global longwave mosaic. Clouds only dims everything but bright, cold cloud tops; a brightness filter, not a cloud mask. Coverage and freshness differ by region.',
                   ),
       };
+      if (precipitation()) {
+        const period = manifest?.periods?.find((p) => p.start === time);
+        const day = daily?.days?.[dailyIndex];
+        const preceding = day
+          ? daily.days.slice(Math.max(0, dailyIndex - 6), dailyIndex + 1)
+          : [];
+        const complete =
+          preceding.length === 7 &&
+          preceding.every(
+            (d, i) =>
+              d.accumulationMm !== null &&
+              (!i ||
+                Date.parse(d.start) - Date.parse(preceding[i - 1].start) ===
+                  86400000),
+          );
+        const sum = complete
+          ? preceding.reduce((total, d) => total + d.accumulationMm, 0)
+          : null;
+        controls.summary.lines = [
+          {
+            id: 'source',
+            text: 'NASA GIBS · GPM IMERG Early/Final V07',
+            muted: true,
+          },
+          {
+            id: 'meaning',
+            text: t('30-minute mean rate · ~5 h delayed · gaps are unknown'),
+            muted: true,
+          },
+          {
+            id: 'period',
+            text: period
+              ? `${period.start} → ${period.end} · mm/h`
+              : t('Observation unavailable'),
+          },
+          {
+            id: 'limits',
+            text: t(
+              'Satellite estimate; not ground measurement, radar or confirmed flooding. Terrain and coastal biases; transparent pixels are not proof of dry conditions.',
+            ),
+            muted: true,
+          },
+          {
+            id: 'daily-source',
+            text: t('Daily accumulation · NASA POWER / IMERG · mm'),
+            muted: true,
+          },
+          ...(daily
+            ? [
+                {
+                  id: 'cell',
+                  text: `${t('Sample location')} ${daily.point.lat.toFixed(1)}°, ${daily.point.lon.toFixed(1)}° · ~11 km`,
+                },
+                {
+                  id: 'daily-period',
+                  text: day ? `${day.start} → ${day.end}` : t('Unavailable'),
+                },
+                {
+                  id: 'daily-value',
+                  text:
+                    day?.accumulationMm !== null && day
+                      ? `${day.accumulationMm.toFixed(1)} mm`
+                      : t('No data · unknown, not zero'),
+                },
+                {
+                  id: 'daily-sum',
+                  text: `${t('7-day accumulation')}: ${sum === null ? t('No data · unknown, not zero') : `${sum.toFixed(1)} mm`} ${preceding.length ? `(${preceding[0].start.slice(0, 10)} → ${day.end.slice(0, 10)} UTC)` : ''}`,
+                },
+                {
+                  id: 'daily-processing',
+                  text: t(
+                    'Daily archive: Late/Final · recent days may be missing',
+                  ),
+                  muted: true,
+                },
+                {
+                  id: 'daily-fetched',
+                  text: `${t('Fetched')}: ${new Date(daily.fetchedAt).toISOString()}${daily.stale ? ` · ${t('Stale source')}` : ''}`,
+                  muted: true,
+                },
+              ]
+            : []),
+          {
+            id: 'daily-status',
+            text: dailyLoading
+              ? t('loading')
+              : dailyError
+                ? presentWeatherProblem(dailyError)
+                : daily
+                  ? ''
+                  : t('Sample map center for daily accumulation history'),
+          },
+        ];
+        const dailyChips = [
+          {
+            id: 'accumulation',
+            label: t('Sample map center'),
+            params: { accumulation: true },
+            disabled: !enabled || dailyLoading,
+          },
+          {
+            id: 'accumulation-prev',
+            label: t('Previous day'),
+            params: { accumulationStep: -1 },
+            disabled: !daily || dailyIndex <= 0,
+          },
+          {
+            id: 'accumulation-next',
+            label: t('Next day'),
+            params: { accumulationStep: 1 },
+            disabled: !daily || dailyIndex >= daily.days.length - 1,
+          },
+          {
+            id: 'accumulation-available',
+            label: t('Latest available day'),
+            params: { accumulationAvailable: true },
+            disabled: !daily?.latestAvailable,
+          },
+          {
+            id: 'accumulation-latest',
+            label: t('Latest day'),
+            params: { accumulationLatest: true },
+            disabled: !daily,
+          },
+        ];
+        controls.chips.push(...dailyChips);
+        controls.dailyChips = dailyChips;
+      }
       controls.summary.settings = [
+        ...(radar
+          ? [
+              {
+                id: 'product',
+                label: t('PRODUCT'),
+                chips: controls.chips.filter(({ params }) => params.product),
+              },
+            ]
+          : []),
+        ...(precipitation()
+          ? [
+              {
+                id: 'accumulation',
+                label: t('Daily accumulation · NASA POWER / IMERG · mm'),
+                chips: controls.dailyChips,
+              },
+            ]
+          : []),
         ...(satellite
           ? [
               {
@@ -852,12 +1149,18 @@ export function createWeatherLayer({
     getStats() {
       return {
         count: shownTime() ? 1 : 0,
-        countLabel: isLatest() ? t('Observed') : t('History'),
+        countLabel: precipitation()
+          ? t('SATELLITE ESTIMATE · IMERG · mm/h')
+          : isLatest()
+            ? t('Observed')
+            : t('History'),
         lastUpdate: shownTime() ? Date.parse(shownTime()) : null,
         loading,
         error: error || rendering?.getDiagnostics().error || null,
         stale: Boolean(manifest?.stale || observationDelayed()),
-        source: manifest?.source ?? 'NOAA nowCOAST',
+        source:
+          manifest?.source ??
+          (precipitation() ? 'NASA GIBS · GPM IMERG' : 'NOAA nowCOAST'),
         observedAt: shownTime(),
       };
     },

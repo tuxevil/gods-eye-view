@@ -553,6 +553,7 @@ function layerHarness({
   layer.init(viewer);
   layer.enable();
   return {
+    viewer,
     layer,
     rendering,
     stages,
@@ -1989,7 +1990,11 @@ test('observed descriptors keep configuration only and label satellite clouds by
     assert.equal(controls.summary.sections, undefined);
     assert.deepEqual(
       controls.summary.settings.map(({ label }) => label),
-      id === 'weather-satellite' ? ['REGION', 'IMAGE', 'OPACITY'] : ['OPACITY'],
+      id === 'weather-satellite'
+        ? ['REGION', 'IMAGE', 'OPACITY']
+        : id === 'weather-radar'
+          ? ['PRODUCT', 'OPACITY']
+          : ['OPACITY'],
     );
     assert.deepEqual(
       controls.summary.settings.flatMap(({ chips }) => chips),
@@ -2333,7 +2338,12 @@ test('layer warms the next advertised observation only after a successful playin
   assert.equal(warmed.length, 2, 'hidden products do not prefetch');
 });
 
-for (const product of ['radar', 'clouds-regional', 'lightning']) {
+for (const product of [
+  'radar',
+  'precipitation-imerg',
+  'clouds-regional',
+  'lightning',
+]) {
   test(`${product} on the globe host uses 256 px tiles to level 6`, async (t) => {
     const collection = new ImageryLayerCollection();
     const h = renderingHarness({
@@ -2435,5 +2445,102 @@ test('GOES-19 selection retains the satellite contract, exact history and visibl
   h.stages.at(-1).finish();
   await flush();
   assert.equal(h.layer.getDiagnostics().time, times[1]);
+  h.layer.destroy();
+});
+
+test('IMERG uses shared history with exact frames and a separate nullable daily cell archive; disable aborts samples', async () => {
+  let dailyCalls = 0,
+    pending = null,
+    sampleSignal;
+  const product = 'precipitation-imerg';
+  const daily = {
+    point: { lat: -2, lon: -79 },
+    fetchedAt: Date.now(),
+    stale: false,
+    latestAvailable: '2026-09-14T00:00:00.000Z',
+    days: Array.from({ length: 8 }, (_, i) => ({
+      start: `2026-09-${String(8 + i).padStart(2, '0')}T00:00:00.000Z`,
+      end: `2026-09-${String(9 + i).padStart(2, '0')}T00:00:00.000Z`,
+      accumulationMm: i === 7 ? null : 1,
+    })),
+  };
+  const h = layerHarness({
+    id: 'weather-radar',
+    feed: {
+      getSnapshot: async ({ product }) => ({
+        ...snapshot,
+        product,
+        source: 'NASA GIBS · GPM IMERG',
+        bounds: { west: -100, south: -16, east: -60, north: 4 },
+        periods: times.map((start) => ({
+          start,
+          end: new Date(Date.parse(start) + 1800000).toISOString(),
+        })),
+      }),
+      getAccumulation: async ({ signal }) => {
+        dailyCalls++;
+        sampleSignal = signal;
+        return pending ? pending.promise : daily;
+      },
+    },
+  });
+  h.viewer.scene = {
+    canvas: { clientWidth: 100, clientHeight: 100 },
+    globe: { ellipsoid: Cesium.Ellipsoid.WGS84 },
+  };
+  h.viewer.camera.pickEllipsoid = () => Cesium.Cartesian3.fromDegrees(-79, -2);
+  h.layer.setParams({ product });
+  await flush();
+  h.stages.at(-1).finish();
+  await flush();
+  let c = h.layer.getRowControls();
+  assert.match(c.summary.label, /SATELLITE ESTIMATE/);
+  assert.equal(c.summary.units, 'mm/h');
+  assert.equal(c.summary.maxGapMinutes, 0);
+  assert.equal(c.legend.length, 8);
+  assert.equal(dailyCalls, 0);
+  assert.ok(c.summary.lines.some((l) => l.text.includes(times[2])));
+  h.layer.setParams({ accumulation: true });
+  await flush();
+  assert.equal(dailyCalls, 1);
+  c = h.layer.getRowControls();
+  assert.match(
+    c.summary.lines.find((l) => l.id === 'daily-value').text,
+    /unknown, not zero/,
+  );
+  h.layer.setParams({ accumulationAvailable: true });
+  c = h.layer.getRowControls();
+  assert.equal(
+    c.summary.lines.find((l) => l.id === 'daily-value').text,
+    '1.0 mm',
+  );
+  assert.match(
+    c.summary.lines.find((l) => l.id === 'daily-sum').text,
+    /7.0 mm/,
+  );
+  assert.match(
+    c.summary.lines.find((l) => l.id === 'daily-period').text,
+    /2026-09-14T00:00:00.000Z/,
+  );
+  h.layer.setParams({ step: -1 });
+  h.stages.at(-1).finish();
+  await flush();
+  assert.equal(h.layer.getDiagnostics().time, times[1]);
+  pending = deferred();
+  h.layer.setParams({ accumulation: true });
+  await flush();
+  assert.equal(sampleSignal.aborted, false);
+  h.layer.disable();
+  assert.equal(sampleSignal.aborted, true);
+  pending.resolve(daily);
+  await flush();
+  assert.ok(
+    !h.layer.getRowControls().summary.lines.some((l) => l.id === 'daily-value'),
+  );
+  h.layer.setParams({ accumulation: true });
+  await flush();
+  assert.equal(dailyCalls, 2, 'disabled layer performs no sample requests');
+  h.layer.setParams({ product: 'radar' });
+  assert.deepEqual(h.layer.getParams(), { opacity: 'strong' });
   h.layer.destroy();
 });

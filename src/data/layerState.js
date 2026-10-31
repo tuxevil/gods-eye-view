@@ -312,6 +312,10 @@ const OPTION_GROUPS = Object.freeze({
     }),
   ]),
   'weather-radar': Object.freeze([
+    enumOption('product', 'p', 'radar', ['radar', 'precipitation-imerg'], {
+      radar: 'r',
+      'precipitation-imerg': 'i',
+    }),
     enumOption('opacity', 'o', 'strong', ['light', 'strong'], {
       light: 'l',
       strong: 's',
@@ -620,6 +624,11 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     token: '3',
     disposition: 'enabled-only',
   }),
+  Object.freeze({
+    id: 'igepn-geophysics',
+    token: '9',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({ id: 'local-dams', token: 'q', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'local-datacenters',
@@ -694,6 +703,7 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     optionOwner: 'traffic',
   }),
   Object.freeze({ id: 'transit', token: 'j', disposition: 'enabled-only' }),
+  Object.freeze({ id: 'watersheds', token: '00', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'weather-cyclones',
     token: 'y',

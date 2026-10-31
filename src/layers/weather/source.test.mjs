@@ -226,3 +226,85 @@ test('GOES-19 uses the existing bounded source and local exact-time image/tile r
     /size/,
   );
 });
+
+test('IMERG source preserves rate periods and refuses accumulation/rate semantic confusion', async () => {
+  const product = 'precipitation-imerg';
+  const value = {
+    ...snapshot(),
+    product,
+    measurement: 'satellite_estimate',
+    units: 'mm/h',
+    periods: [
+      {
+        start: time,
+        end: '2026-09-16T02:30:00.000Z',
+        units: 'mm/h',
+        accumulationMm: null,
+      },
+    ],
+  };
+  assert.equal(validateWeatherSnapshot(value, product), value);
+  for (const bad of [
+    { units: 'mm' },
+    { measurement: 'radar' },
+    { periods: [{ ...value.periods[0], accumulationMm: 1 }] },
+    { periods: [{ ...value.periods[0], end: '2026-09-16T03:00:00.000Z' }] },
+  ])
+    assert.throws(
+      () => validateWeatherSnapshot({ ...value, ...bad }, product),
+      /Malformed/,
+    );
+  assert.match(weatherImageUrl(product, time), /product=precipitation-imerg/);
+  assert.match(weatherTileUrl(product, time), /product=precipitation-imerg/);
+  const a = {
+    schemaVersion: 1,
+    product,
+    point: { lat: -2, lon: -79 },
+    units: 'mm',
+    days: [
+      {
+        start: '2026-09-15T00:00:00.000Z',
+        end: '2026-09-16T00:00:00.000Z',
+        accumulationMm: null,
+      },
+    ],
+  };
+  let payload = a;
+  const source = createWeatherSource({
+    fetchImpl: async (url, options) => {
+      assert.equal(url, '/api/weather/accumulation?lat=-2.0&lon=-79.0');
+      assert.equal(options.redirect, 'error');
+      return Response.json(payload);
+    },
+  });
+  assert.equal(
+    (await source.getAccumulation({ lat: -2, lon: -79 })).days[0]
+      .accumulationMm,
+    null,
+  );
+  payload = { ...a, units: 'mm/h' };
+  await assert.rejects(
+    source.getAccumulation({ lat: -2, lon: -79 }),
+    /Malformed/,
+  );
+  payload = { ...a, point: { lat: NaN, lon: -79 } };
+  await assert.rejects(
+    source.getAccumulation({ lat: -2, lon: -79 }),
+    /Malformed/,
+  );
+  payload = { ...a, days: [{ ...a.days[0], accumulationMm: -999 }] };
+  await assert.rejects(
+    source.getAccumulation({ lat: -2, lon: -79 }),
+    /Malformed/,
+  );
+  await assert.rejects(
+    source.getAccumulation({ lat: 0, lon: 0 }),
+    /outside coverage/,
+  );
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    source.getAccumulation({ lat: -2, lon: -79, signal: controller.signal }),
+    /abort/i,
+  );
+});

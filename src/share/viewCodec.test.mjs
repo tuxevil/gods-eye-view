@@ -1338,3 +1338,22 @@ test('a layer option filed under a mirror layer is ignored', () => {
     { scope: 'layer-option', code: `${military}.${layerTokenNumber('m')}` },
   ]);
 });
+
+test('IMERG map product survives binary sharing while absent radar product keeps old links unchanged', () => {
+  const state = decodeOk(
+    encodeShareView({
+      layerState: {
+        enabledLayerIds: ['weather-radar'],
+        options: { 'weather-radar': { product: 'precipitation-imerg' } },
+      },
+    }),
+  ).state;
+  assert.equal(
+    state.layerState.options['weather-radar'].product,
+    'precipitation-imerg',
+  );
+  assert.equal(
+    SHARE_VIEW_LAYER_OPTION_ABSENT['weather-radar'].product,
+    'radar',
+  );
+});

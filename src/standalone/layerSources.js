@@ -1,5 +1,7 @@
+import { createWatershedSource } from '../layers/watersheds/source.js';
 import { createEcuadorEnergySource } from '../layers/ecuadorEnergy/source.js';
 import { createSngrEventsSource } from '../layers/sngrEvents/source.js';
+import { createIgepnGeophysicsSource } from '../layers/igepnGeophysics/source.js';
 import { createWeatherStationSource } from '../layers/weatherStations/source.js';
 import { createDirectionsSource } from '../layers/directions/source.js';
 import { createRecentImagerySource } from '../layers/recentImagery/source.js';
@@ -58,8 +60,10 @@ export function createStandaloneLayerSources(overrides = {}) {
     wind: createWindSource(),
     weather: createWeatherSource(),
     'weather-stations': createWeatherStationSource(),
+    watersheds: createWatershedSource(),
     'ecuador-energy': createEcuadorEnergySource(),
     'sngr-events': createSngrEventsSource(),
+    'igepn-geophysics': createIgepnGeophysicsSource(),
     cyclones: createCycloneSource(),
     mapillary: createMapillarySource({
       token: import.meta.env?.MAPILLARY_CLIENT_TOKEN || '',

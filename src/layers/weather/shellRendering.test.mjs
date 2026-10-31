@@ -82,7 +82,9 @@ function harness({ product = 'radar', camera, ...options } = {}) {
       return response();
     },
     decodeImage: async () => {
-      const size = ['clouds', 'clouds-goes19'].includes(product)
+      const size = ['clouds', 'clouds-goes19', 'precipitation-imerg'].includes(
+        product,
+      )
         ? { width: 2048, height: 1024 }
         : { width: 4096, height: 2048 };
       const image = {
@@ -126,6 +128,7 @@ test('shell heights stack every product with lightning highest', () => {
     'clouds-regional': 5_800,
     'clouds-goes19': 5_800,
     radar: 6_200,
+    'precipitation-imerg': 6_200,
     lightning: 6_600,
   });
   assert.equal(WEATHER_SHELL_CACHE_BYTES, 128 * 1024 * 1024);
@@ -749,6 +752,7 @@ test('infrared frames get the display transfer; radar and lightning keep their p
     ['clouds-goes19', true],
     ['clouds', true],
     ['radar', false],
+    ['precipitation-imerg', false],
     ['lightning', false],
   ]) {
     const h = harness({ product });

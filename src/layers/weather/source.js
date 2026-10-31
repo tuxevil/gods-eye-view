@@ -6,6 +6,7 @@ const msg = (text) => text;
 
 const WEATHER_PRODUCTS = Object.freeze([
   'radar',
+  'precipitation-imerg',
   'clouds',
   'clouds-regional',
   'clouds-goes19',
@@ -46,12 +47,29 @@ export function validateWeatherSnapshot(value, product) {
     value.tilingScheme !== 'geographic'
   )
     throw new Error(msg('Malformed weather manifest'));
+  if (
+    product === 'precipitation-imerg' &&
+    (value.measurement !== 'satellite_estimate' ||
+      value.units !== 'mm/h' ||
+      !Array.isArray(value.periods) ||
+      value.periods.length !== times.length ||
+      value.periods.some(
+        (p, i) =>
+          !p ||
+          p.start !== times[i] ||
+          Date.parse(p.end) - Date.parse(p.start) !== 1800000 ||
+          p.units !== 'mm/h' ||
+          p.accumulationMm !== null,
+      ))
+  )
+    throw new Error(msg('Malformed weather manifest'));
   return value;
 }
 
 /** Largest whole-extent image per product; also the proxy default size. */
 export const WEATHER_IMAGE_SIZES = Object.freeze({
   radar: Object.freeze({ width: 4096, height: 2048 }),
+  'precipitation-imerg': Object.freeze({ width: 2048, height: 1024 }),
   'clouds-regional': Object.freeze({ width: 4096, height: 2048 }),
   'clouds-goes19': Object.freeze({ width: 2048, height: 1024 }),
   clouds: Object.freeze({ width: 2048, height: 1024 }),
@@ -133,6 +151,66 @@ export function createWeatherSource({
           await readResponseJsonCapped(response, 16_384, controller.signal),
           product,
         );
+      } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', abort);
+      }
+    },
+    async getAccumulation({ lat, lon, signal } = {}) {
+      if (
+        ![lat, lon].every(Number.isFinite) ||
+        lat < -6 ||
+        lat > 2 ||
+        lon < -93 ||
+        lon > -74
+      )
+        throw new Error(msg('Map center outside coverage'));
+      const controller = new AbortController();
+      const abort = () => controller.abort(signal.reason);
+      signal?.addEventListener('abort', abort, { once: true });
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        signal?.throwIfAborted();
+        const response = await fetchImpl(
+          `/api/weather/accumulation?lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}`,
+          { signal: controller.signal, cache: 'no-store', redirect: 'error' },
+        );
+        if (!response.ok) throw new Error(`Weather HTTP ${response.status}`);
+        const value = await readResponseJsonCapped(
+          response,
+          65536,
+          controller.signal,
+        );
+        if (
+          value?.schemaVersion !== 1 ||
+          value.product !== 'precipitation-imerg' ||
+          value.units !== 'mm' ||
+          !Array.isArray(value.days) ||
+          value.days.length < 1 ||
+          value.days.length > 90 ||
+          value.days.some(
+            (d, i) =>
+              !d ||
+              !/^\d{4}-\d\d-\d\dT00:00:00\.000Z$/.test(d.start) ||
+              !Number.isFinite(Date.parse(d.start)) ||
+              new Date(d.start).toISOString() !== d.start ||
+              new Date(Date.parse(d.start) + 86400000).toISOString() !==
+                d.end ||
+              (i > 0 && d.start <= value.days[i - 1].start) ||
+              !(
+                d.accumulationMm === null ||
+                (typeof d.accumulationMm === 'number' &&
+                  Number.isFinite(d.accumulationMm) &&
+                  d.accumulationMm >= 0)
+              ),
+          ) ||
+          Math.abs(value.point?.lat - Number(lat.toFixed(1))) > 0.001 ||
+          Math.abs(value.point?.lon - Number(lon.toFixed(1))) > 0.001 ||
+          !Number.isFinite(value.point?.lat) ||
+          !Number.isFinite(value.point?.lon)
+        )
+          throw new Error(msg('Malformed weather manifest'));
+        return value;
       } finally {
         clearTimeout(timer);
         signal?.removeEventListener('abort', abort);

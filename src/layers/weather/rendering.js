@@ -251,11 +251,13 @@ function createGlobeRendering({
         collection,
         kind,
         priority:
-          snapshot.product === 'lightning'
-            ? 3
-            : snapshot.product === 'radar'
-              ? 2
-              : 1,
+          snapshot.product === 'precipitation-imerg'
+            ? 2
+            : snapshot.product === 'lightning'
+              ? 3
+              : snapshot.product === 'radar'
+                ? 2
+                : 1,
         product: snapshot.product,
         requests: new Set(),
         retries: new Map(),
@@ -343,13 +345,15 @@ function createGlobeRendering({
             : undefined,
         );
         const credit = new cesium.Credit(
-          snapshot.product === 'lightning'
-            ? 'NOAA/NWS lightning density · derived from Vaisala NLDN/GLD360'
-            : snapshot.product === 'radar'
-              ? 'NOAA nowCOAST · NWS/OAR MRMS'
-              : snapshot.product === 'clouds-goes19'
-                ? 'NOAA/NESDIS GOES-19 · UW–Madison SSEC RealEarth'
-                : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
+          snapshot.product === 'precipitation-imerg'
+            ? 'NASA GPM / PPS · NASA GIBS (ESDIS)'
+            : snapshot.product === 'lightning'
+              ? 'NOAA/NWS lightning density · derived from Vaisala NLDN/GLD360'
+              : snapshot.product === 'radar'
+                ? 'NOAA nowCOAST · NWS/OAR MRMS'
+                : snapshot.product === 'clouds-goes19'
+                  ? 'NOAA/NESDIS GOES-19 · UW–Madison SSEC RealEarth'
+                  : 'NOAA nowCOAST · NESDIS GOES / global satellite partners',
           false,
         );
         const provider = global
