@@ -1,5 +1,6 @@
 import { t } from '../../i18n/index.js';
 import * as Cesium from 'cesium';
+import { installCompactClusterBadges } from '../clusterBadges.js';
 import { stationStale, temperatureColor } from './model.js';
 const escape = (s) =>
   String(s ?? 'Unavailable').replace(
@@ -54,7 +55,8 @@ export function createWeatherStationsLayer({
     stale = false,
     listener,
     clickHandler,
-    selectedId;
+    selectedId,
+    removeClusterStyling;
   const showSelected = () => {
     const r = readings.find((r) => r.id === selectedId);
     overlayHost?.setEntries(
@@ -105,6 +107,7 @@ export function createWeatherStationsLayer({
       data.clustering.enabled = true;
       data.clustering.pixelRange = 45;
       data.clustering.minimumClusterSize = 3;
+      removeClusterStyling = installCompactClusterBadges(data, '#38bdf8');
       viewer.dataSources.add(data);
     },
     enable() {
@@ -314,6 +317,8 @@ export function createWeatherStationsLayer({
     },
     destroy() {
       layer.disable();
+      removeClusterStyling?.();
+      removeClusterStyling = null;
       if (data) viewer?.dataSources.remove(data, true);
       data = null;
       viewer = null;

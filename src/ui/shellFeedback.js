@@ -109,10 +109,15 @@ function localizeLayerRoster(detail) {
 /** The chip's label and detail in the UI language (exported for tests). */
 export function localizeLoadingPresentation(presentation) {
   if (!presentation) return presentation;
+  const detail = localizeStatusDetail(presentation.detail);
+  const label = localizeStatusLabel(presentation.label);
   return {
     ...presentation,
-    label: localizeStatusLabel(presentation.label),
-    detail: localizeStatusDetail(presentation.detail),
+    label:
+      presentation.label === 'LOAD FAILED' && detail
+        ? `${label} · ${detail}`
+        : label,
+    detail,
   };
 }
 export class ShellFeedback {

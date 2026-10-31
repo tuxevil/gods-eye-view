@@ -434,7 +434,14 @@ export function presentLoadingFeedback(state, summary, nowMs) {
             state.activeIds[0] === 'military-installations'
           ? 'MAPPED SITES LOADED'
           : labels[state.terminal] || 'LOAD COMPLETE';
-    return { state: state.terminal, label, detail: '' };
+    return {
+      state: state.terminal,
+      label,
+      detail:
+        state.terminal === 'error'
+          ? failedLayerRoster(state, summary)
+          : '',
+    };
   }
   const active = summary.active;
   if (active.length === 1 && active[0].cameraRetry && !summary.disabling) {
@@ -485,4 +492,22 @@ export function presentLoadingFeedback(state, summary, nowMs) {
     label,
     detail: `${names}${suffix}`,
   };
+}
+
+function failedLayerRoster(state, summary) {
+  const failedIds = new Set(state?.failedEventIds || []);
+  const participants = new Set(state?.activeIds || []);
+  for (const record of summary.records) {
+    if (
+      participants.has(record.id) &&
+      (record.error || record.unavailable || record.keyRequired)
+    ) {
+      failedIds.add(record.id);
+    }
+  }
+  const labels = [...failedIds].map(
+    (id) => summary.records.find((record) => record.id === id)?.label || id,
+  );
+  if (labels.length <= 2) return labels.join(' · ');
+  return `${labels.slice(0, 2).join(' · ')} +${labels.length - 2}`;
 }

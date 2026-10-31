@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { t } from '../../i18n/index.js';
+import { installCompactClusterBadges } from '../clusterBadges.js';
 import { igepnRecordColor } from './model.js';
 
 export * from './model.js';
@@ -209,6 +210,7 @@ export function createIgepnGeophysicsLayer({
   let listener = null;
   let clickHandler = null;
   let selectedId = null;
+  let removeClusterStyling = null;
 
   function getRecord(id) {
     if (id?.startsWith('volcano:')) {
@@ -394,6 +396,7 @@ export function createIgepnGeophysicsLayer({
       data.clustering.enabled = true;
       data.clustering.pixelRange = 34;
       data.clustering.minimumClusterSize = 4;
+      removeClusterStyling = installCompactClusterBadges(data, '#c084fc');
       viewer.dataSources.add(data);
       overlayHost?.setVisible('igepn-geophysics', false);
     },
@@ -586,6 +589,8 @@ export function createIgepnGeophysicsLayer({
     },
     destroy(v = viewer) {
       layer.disable();
+      removeClusterStyling?.();
+      removeClusterStyling = null;
       if (data) v?.dataSources?.remove(data, true);
       viewer = null;
       data = null;

@@ -148,6 +148,12 @@ html:not([lang='en']) #global-loading-detail {
   border-color: rgba(255, 98, 82, 0.55);
   color: #ff9b8e;
 }
+#global-loading-status[data-state='error'] #global-loading-label {
+  max-width: min(680px, 84vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #global-loading-status[data-state='error'] #global-loading-label,
 #global-loading-status[data-state='error'] #global-loading-detail {
   color: #ff9b8e;

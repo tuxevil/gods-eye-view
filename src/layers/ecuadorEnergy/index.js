@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { t } from '../../i18n/index.js';
+import { installCompactClusterBadges } from '../clusterBadges.js';
 import { plantMarkerColor, plantStale } from './model.js';
 import { geographicSiteRecords, plantGeography } from './sites.js';
 
@@ -213,6 +214,7 @@ export function createEcuadorEnergyLayer({
   let listener = null;
   let clickHandler = null;
   let selectedId = null;
+  let removeClusterStyling = null;
 
   const showSelected = () => {
     const selected = mappedRecords().find((p) => p.id === selectedId);
@@ -270,6 +272,7 @@ export function createEcuadorEnergyLayer({
       data.clustering.enabled = true;
       data.clustering.pixelRange = 36;
       data.clustering.minimumClusterSize = 3;
+      removeClusterStyling = installCompactClusterBadges(data, '#60a5fa');
       viewer.dataSources.add(data);
     },
     enable() {
@@ -491,6 +494,8 @@ export function createEcuadorEnergyLayer({
     },
     destroy() {
       layer.disable();
+      removeClusterStyling?.();
+      removeClusterStyling = null;
       if (data) viewer?.dataSources.remove(data, true);
       data = null;
       viewer = null;
